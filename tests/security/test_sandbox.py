@@ -17,9 +17,12 @@ def test_env_stripping(tmp_path):
     env = json.loads(result.strip())
     assert "OPENAI_API_KEY" not in env
     assert "AWS_SECRET_ACCESS_KEY" not in env
-    # Only allowed keys should be present
+    # Only allowed keys should be present (plus macOS-injected system vars that are not sensitive)
     allowed = {"PATH", "HOME", "PYTHONPATH", "PYTHONDONTWRITEBYTECODE"}
-    assert set(env.keys()).issubset(allowed)
+    # macOS injects __CF_USER_TEXT_ENCODING and LC_CTYPE at the OS level regardless of env=
+    # These are not sensitive — they are locale/encoding metadata injected by CoreFoundation
+    macos_system_vars = {"__CF_USER_TEXT_ENCODING", "LC_CTYPE"}
+    assert set(env.keys()).issubset(allowed | macos_system_vars)
 
 
 @pytest.mark.xfail(reason="SEC-04 not yet implemented", strict=False)
