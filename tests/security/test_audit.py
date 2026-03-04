@@ -1,7 +1,6 @@
 import pytest
 
 
-@pytest.mark.xfail(reason="SEC-02 not yet implemented", strict=False)
 def test_hash_chain_integrity(tmp_path):
     from argus.security.audit.chain import build_entry, GENESIS_HASH
     event1 = {"type": "tool_call", "tool": "read_file"}
@@ -13,20 +12,22 @@ def test_hash_chain_integrity(tmp_path):
     assert len(hash1) == 64  # SHA-256 hex digest
 
 
-@pytest.mark.xfail(reason="SEC-02 not yet implemented", strict=False)
 def test_tamper_detection(tmp_path):
     from argus.security.audit.chain import build_entry, verify_chain, GENESIS_HASH
     log_file = tmp_path / "audit.jsonl"
     event = {"type": "tool_call", "tool": "read_file"}
-    line, _ = build_entry(event, GENESIS_HASH)
-    log_file.write_text(line + "\n")
-    # Tamper: replace content
-    log_file.write_text('{"type":"tampered","prev_hash":"' + "0"*64 + '"}\n')
+    event2 = {"type": "tool_output", "tool": "read_file"}
+    line1, hash1 = build_entry(event, GENESIS_HASH)
+    line2, hash2 = build_entry(event2, hash1)
+    # Write a valid two-entry chain
+    log_file.write_text(line1 + "\n" + line2 + "\n")
+    # Tamper: replace first entry content (but keep prev_hash=GENESIS_HASH)
+    tampered_line1 = '{"prev_hash":"' + "0" * 64 + '","type":"tampered","tool":"write_file"}'
+    log_file.write_text(tampered_line1 + "\n" + line2 + "\n")
     broken = verify_chain(str(log_file))
     assert len(broken) > 0
 
 
-@pytest.mark.xfail(reason="SEC-02 not yet implemented", strict=False)
 def test_fail_closed(tmp_socket_path):
     from argus.security.audit.logger import AuditLogger
     from argus.security.exceptions import AuditUnavailableError
@@ -35,7 +36,6 @@ def test_fail_closed(tmp_socket_path):
         logger.send({"type": "test"})
 
 
-@pytest.mark.xfail(reason="SEC-02 not yet implemented", strict=False)
 @pytest.mark.asyncio
 async def test_separate_process(tmp_socket_path, tmp_path):
     import subprocess
