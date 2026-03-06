@@ -1,12 +1,6 @@
-"""SessionStore xfail stubs -- MEM-02, MEM-03.
-
-Each test imports inside the body so xfail catches NotImplementedError
-at runtime, not ImportError at collection time.
-"""
-import pytest
+"""SessionStore tests -- MEM-02, MEM-03."""
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_session_fact_put_and_get(tmp_db_path):
     """MEM-02: put a fact, get it back, assert equal."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -19,7 +13,6 @@ async def test_session_fact_put_and_get(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_session_fact_persists_across_reads(tmp_db_path):
     """MEM-02: put then get twice, both return same value."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -33,7 +26,6 @@ async def test_session_fact_persists_across_reads(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_session_isolation(tmp_db_path):
     """MEM-02: put in session A, get in session B returns None."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -47,7 +39,6 @@ async def test_session_isolation(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_global_fact_cross_session(tmp_db_path):
     """MEM-03: put global in session A, get global in session B returns value."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -61,7 +52,6 @@ async def test_global_fact_cross_session(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_facts_returns_copy(tmp_db_path):
     """MEM-03: facts() returns dict, mutating it does not affect store."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -76,7 +66,6 @@ async def test_facts_returns_copy(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_get_missing_key_returns_none(tmp_db_path):
     """MEM-02/03: get nonexistent key returns None, not KeyError."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -88,7 +77,6 @@ async def test_get_missing_key_returns_none(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_put_overwrites_existing(tmp_db_path):
     """MEM-03: put same key twice, get returns latest value."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -102,7 +90,6 @@ async def test_put_overwrites_existing(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_delete_removes_fact(tmp_db_path):
     """MEM-03: put then delete then get returns None."""
     from argus.memory.manager import MemoryManager, MemoryConfig

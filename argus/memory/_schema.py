@@ -10,6 +10,8 @@ SQLite NULL uniqueness pitfall in composite primary keys.
 """
 from __future__ import annotations
 
+import aiosqlite
+
 SCHEMA_VERSION = 1
 
 MIGRATIONS: dict[int, list[str]] = {
@@ -39,12 +41,19 @@ MIGRATIONS: dict[int, list[str]] = {
 }
 
 
-async def init_schema(conn) -> None:
+async def init_schema(conn: aiosqlite.Connection) -> None:
     """Apply pending schema migrations based on PRAGMA user_version.
 
     Reads current version, applies all MIGRATIONS entries with version >
-    current, sets user_version to latest applied version.
-
-    Phase 4 Plan 02 implements this; stub raises NotImplementedError.
+    current, sets user_version to latest applied version, and commits.
     """
-    raise NotImplementedError("init_schema not yet implemented")
+    cursor = await conn.execute("PRAGMA user_version")
+    row = await cursor.fetchone()
+    current_version = row[0]
+
+    for version in sorted(MIGRATIONS.keys()):
+        if version > current_version:
+            for sql in MIGRATIONS[version]:
+                await conn.execute(sql)
+            await conn.execute(f"PRAGMA user_version = {version}")
+            await conn.commit()

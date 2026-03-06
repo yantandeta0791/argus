@@ -1,12 +1,6 @@
-"""MemoryManager xfail stubs -- MEM-03 schema init and lifecycle.
-
-Each test imports inside the body so xfail catches NotImplementedError
-at runtime, not ImportError at collection time.
-"""
-import pytest
+"""MemoryManager tests -- MEM-03 schema init and lifecycle."""
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_schema_init(tmp_db_path):
     """MEM-03: connect creates tables, user_version=1."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -28,7 +22,6 @@ async def test_schema_init(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_connect_creates_db_file(tmp_db_path):
     """MEM-03: after connect, db file exists on disk."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -39,7 +32,6 @@ async def test_connect_creates_db_file(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_session_returns_store(tmp_db_path):
     """MEM-02: session() returns a SessionStore instance."""
     from argus.memory.manager import MemoryManager, MemoryConfig
@@ -52,7 +44,6 @@ async def test_session_returns_store(tmp_db_path):
     await mgr.close()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 async def test_close_closes_connection(tmp_db_path):
     """MEM-03: after close, connection is None."""
     from argus.memory.manager import MemoryManager, MemoryConfig
