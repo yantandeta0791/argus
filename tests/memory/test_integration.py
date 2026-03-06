@@ -1,14 +1,12 @@
-"""Integration xfail stubs -- StateMachine + SessionStore wiring.
+"""Integration tests -- StateMachine + SessionStore wiring.
 
 Proves the full memory hierarchy works end-to-end:
 - MEM-01: working memory isolation per run
 - MEM-02: session facts persist across runs
 - Handler receives store parameter from StateMachine
 """
-import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=(NotImplementedError, TypeError))
 async def test_handler_receives_store():
     """MEM-02 wiring: state handler called with store parameter."""
     from argus.engine.states import RunContext, TaskState
@@ -36,7 +34,6 @@ async def test_handler_receives_store():
     assert all(s is mock_store for s in captured_store)
 
 
-@pytest.mark.xfail(strict=True, raises=(NotImplementedError, TypeError))
 async def test_session_fact_persists_across_runs(tmp_db_path):
     """MEM-02: write fact in run 1, read it in run 2 (same session)."""
     from argus.engine.states import RunContext, TaskState

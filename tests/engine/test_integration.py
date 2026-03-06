@@ -35,11 +35,11 @@ async def test_tool_runner_inside_state_handler(mock_gateway):
     )
     runner = ToolRunner(manifest=manifest, tool_fn=real_tool, gateway=mock_gateway)
 
-    async def execute_handler(context: RunContext, llm) -> None:
+    async def execute_handler(context: RunContext, llm, *, store=None) -> None:
         output = await runner.call(agent_role="executor", raw_input={"value": "hello"})
         context.artifacts["tool_result"] = output.result
 
-    async def noop(c, l):
+    async def noop(c, l, *, store=None):
         pass
 
     handlers = {
@@ -82,11 +82,11 @@ async def test_security_violation_inside_tool_triggers_rollback():
 
     runner = ToolRunner(manifest=manifest, tool_fn=never_reaches_here, gateway=blocking_gateway)
 
-    async def execute_handler(context: RunContext, llm) -> None:
+    async def execute_handler(context: RunContext, llm, *, store=None) -> None:
         context.artifacts["partial"] = "written before tool call"
         await runner.call(agent_role="executor", raw_input={"value": "secret"})
 
-    async def noop(c, l):
+    async def noop(c, l, *, store=None):
         pass
 
     handlers = {

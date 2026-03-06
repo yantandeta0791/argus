@@ -7,9 +7,8 @@ SpendTracker    -- accumulates entries; provides over_budget() as cost_hook
 Design:
 - Instantiate ONE SpendTracker per StateMachine.run() call (fresh-per-run).
   This avoids task spend leaking across tasks.
-- per_day_usd cap is NOT enforced -- SpendTracker is in-memory; cross-run
-  enforcement requires Phase 4 SQLite persistence. A warning is logged when
-  per_day_usd is configured so users know enforcement is deferred.
+- Phase 4 provides daily_spend_usd at construction time from SQLite.
+  The CLI layer loads today's cumulative spend before creating SpendTracker.
 - over_budget() is synchronous -- matches StateMachine.cost_hook signature
   exactly: Callable[[], bool]
 """
@@ -37,20 +36,26 @@ class SpendTracker:
     """Accumulates LLM call costs for one StateMachine run.
 
     Instantiate once per run. Pass over_budget as the cost_hook to StateMachine:
-        tracker = SpendTracker(config.spend)
+        tracker = SpendTracker(config.spend, daily_spend_usd=loaded_from_sqlite)
         machine = StateMachine(..., cost_hook=tracker.over_budget, ...)
+
+    Args:
+        config: SpendConfig with per_task_usd, per_session_usd, per_day_usd caps.
+        daily_spend_usd: Pre-loaded daily cumulative spend from SQLite (Phase 4).
+            Defaults to 0.0 when memory is not configured.
     """
 
-    def __init__(self, config: SpendConfig) -> None:
+    def __init__(self, config: SpendConfig, daily_spend_usd: float = 0.0) -> None:
         self._config = config
         self._task_spend: float = 0.0
         self._session_spend: float = 0.0
+        self._daily_spend: float = daily_spend_usd
         self._entries: list[StateCostEntry] = []
         if config.per_day_usd is not None:
-            logger.warning(
-                "per_day_usd cap configured but NOT enforced in Phase 3 -- "
-                "cross-run enforcement requires Phase 4 SQLite persistence. "
-                "Configure per_task_usd or per_session_usd for immediate enforcement."
+            logger.debug(
+                "per_day_usd=%.4f, pre-loaded daily spend=%.4f",
+                config.per_day_usd,
+                daily_spend_usd,
             )
 
     def record(self, entry: StateCostEntry) -> None:
@@ -63,7 +68,8 @@ class SpendTracker:
         """Return True if any configured cap is exceeded.
 
         Synchronous -- matches StateMachine cost_hook: Callable[[], bool].
-        per_day_usd is not checked (see module docstring).
+        Checks per_task_usd, per_session_usd, and per_day_usd (Phase 4).
+        Daily check: (daily_spend + session_spend) >= per_day_usd.
         """
         if (
             self._config.per_task_usd is not None
@@ -73,6 +79,11 @@ class SpendTracker:
         if (
             self._config.per_session_usd is not None
             and self._session_spend >= self._config.per_session_usd
+        ):
+            return True
+        if (
+            self._config.per_day_usd is not None
+            and (self._daily_spend + self._session_spend) >= self._config.per_day_usd
         ):
             return True
         return False

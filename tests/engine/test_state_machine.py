@@ -1,4 +1,4 @@
-"""State machine tests — STM-01, STM-02, STM-03, STM-04."""
+"""State machine tests -- STM-01, STM-02, STM-03, STM-04."""
 import pytest
 
 
@@ -20,7 +20,7 @@ async def test_transition_is_deterministic(mock_gateway, stub_cost_hook_ok):
     from argus.engine.states import TaskState, RunContext
     from argus.engine.machine import StateMachine
     observed_states = []
-    async def recording_handler(context, llm):
+    async def recording_handler(context, llm, *, store=None):
         observed_states.append(context.current_state)
     handlers = {s: recording_handler for s in [
         TaskState.PLAN, TaskState.EXECUTE, TaskState.VERIFY, TaskState.REFLECT, TaskState.COMMIT
@@ -38,16 +38,18 @@ async def test_failure_triggers_rollback(mock_gateway, stub_cost_hook_ok):
     """STM-03: exception in a state handler triggers rollback; run ends in structured error result."""
     from argus.engine.states import TaskState, RunContext
     from argus.engine.machine import StateMachine
-    async def good_plan(context, llm):
+    async def good_plan(context, llm, *, store=None):
         context.artifacts["plan"] = "done"
-    async def bad_execute(context, llm):
+    async def bad_execute(context, llm, *, store=None):
         raise RuntimeError("simulated failure")
+    async def noop(context, llm, *, store=None):
+        pass
     handlers = {
         TaskState.PLAN: good_plan,
         TaskState.EXECUTE: bad_execute,
-        TaskState.VERIFY: lambda c, l: None,
-        TaskState.REFLECT: lambda c, l: None,
-        TaskState.COMMIT: lambda c, l: None,
+        TaskState.VERIFY: noop,
+        TaskState.REFLECT: noop,
+        TaskState.COMMIT: noop,
     }
     sm = StateMachine(gateway=mock_gateway, cost_hook=stub_cost_hook_ok, handlers=handlers)
     ctx = RunContext(task_id="t3", task_input={})
@@ -64,7 +66,7 @@ async def test_cost_abort_fires_deterministically(mock_gateway, stub_cost_hook_o
     from argus.engine.states import TaskState, RunContext
     from argus.engine.machine import StateMachine
     handler_called = {"called": False}
-    async def should_not_run(context, llm):
+    async def should_not_run(context, llm, *, store=None):
         handler_called["called"] = True
     handlers = {s: should_not_run for s in [
         TaskState.PLAN, TaskState.EXECUTE, TaskState.VERIFY, TaskState.REFLECT, TaskState.COMMIT

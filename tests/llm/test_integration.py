@@ -45,13 +45,13 @@ async def test_state_machine_wired_with_llm_router():
     router = LLMRouter(config=config, tracker=tracker)
 
     # Handlers that exercise the llm callable (as real state handlers would)
-    async def llm_handler(context: RunContext, llm) -> None:
+    async def llm_handler(context: RunContext, llm, *, store=None) -> None:
         if llm:
             result = await llm(context)
             context.artifacts[str(context.current_state)] = result
 
-    # COMMIT handler does not call llm (model is None — router returns {})
-    async def commit_handler(context: RunContext, llm) -> None:
+    # COMMIT handler does not call llm (model is None -- router returns {})
+    async def commit_handler(context: RunContext, llm, *, store=None) -> None:
         context.artifacts["committed"] = True
 
     handlers = {
@@ -97,7 +97,7 @@ async def test_cost_hook_aborts_when_cap_exceeded():
 
     call_count = 0
 
-    async def counting_handler(context: RunContext, llm) -> None:
+    async def counting_handler(context: RunContext, llm, *, store=None) -> None:
         nonlocal call_count
         call_count += 1
         if llm:
