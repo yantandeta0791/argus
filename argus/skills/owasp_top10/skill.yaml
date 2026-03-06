@@ -1,0 +1,11 @@
+name: owasp-top10
+version: "1.0.0"
+description: "Tests a running agent against all 10 OWASP Agentic Top 10 categories (ASI01-ASI10)"
+trust_tier: builtin
+permissions: []
+blast_radius: local
+data_access: []
+egress_allowlist: []
+timeout_s: 30.0
+idempotent: true
+content_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

@@ -1,0 +1,11 @@
+name: security-audit
+version: "1.0.0"
+description: "Scans agent configs and skill manifests for misconfigurations and policy violations"
+trust_tier: builtin
+permissions: []
+blast_radius: local
+data_access: []
+egress_allowlist: []
+timeout_s: 30.0
+idempotent: true
+content_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

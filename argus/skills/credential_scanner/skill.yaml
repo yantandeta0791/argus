@@ -1,0 +1,11 @@
+name: credential-scanner
+version: "1.0.0"
+description: "Detects exposed API keys, tokens, and secrets in agent runtime context, config, and memory"
+trust_tier: builtin
+permissions: []
+blast_radius: local
+data_access: []
+egress_allowlist: []
+timeout_s: 30.0
+idempotent: true
+content_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
