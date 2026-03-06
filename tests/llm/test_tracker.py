@@ -3,7 +3,6 @@ import pytest
 from argus.llm.tracker import StateCostEntry
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-02")
 def test_over_budget_returns_false_when_under_cap():
     """COST-03: over_budget() is False when spend is below cap."""
     from argus.llm.tracker import SpendTracker
@@ -14,7 +13,6 @@ def test_over_budget_returns_false_when_under_cap():
     assert tracker.over_budget() is False
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-02")
 def test_over_budget_returns_true_when_cap_exceeded():
     """COST-03: over_budget() returns True when per_task_usd is exceeded."""
     from argus.llm.tracker import SpendTracker
@@ -25,7 +23,6 @@ def test_over_budget_returns_true_when_cap_exceeded():
     assert tracker.over_budget() is True
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-02")
 def test_no_cap_never_over_budget():
     """COST-03: over_budget() always False when no cap configured."""
     from argus.llm.tracker import SpendTracker
@@ -36,7 +33,6 @@ def test_no_cap_never_over_budget():
     assert tracker.over_budget() is False
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-02")
 def test_cost_breakdown_entries_populated():
     """COST-04: entries() returns all recorded StateCostEntry records."""
     from argus.llm.tracker import SpendTracker
@@ -52,7 +48,6 @@ def test_cost_breakdown_entries_populated():
     assert entries[1].cost_usd == 0.0005
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-02")
 def test_session_spend_cap():
     """COST-03: over_budget() respects per_session_usd cap."""
     from argus.llm.tracker import SpendTracker
