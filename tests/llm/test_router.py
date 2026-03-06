@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from argus.engine.states import RunContext, TaskState
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-03")
 async def test_router_calls_litellm_acompletion(mock_litellm_response, sample_config):
     """LLM-01: LLMRouter calls litellm.acompletion, not direct Anthropic SDK."""
     from argus.llm.router import LLMRouter
@@ -20,7 +19,6 @@ async def test_router_calls_litellm_acompletion(mock_litellm_response, sample_co
     assert "response" in result
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-03")
 async def test_default_model_resolves_to_sonnet(mock_litellm_response, sample_config):
     """LLM-02: default model is anthropic/claude-sonnet-4-6."""
     from argus.llm.router import LLMRouter
@@ -38,7 +36,6 @@ async def test_default_model_resolves_to_sonnet(mock_litellm_response, sample_co
         assert "anthropic/claude-sonnet-4-6" in str(call_kwargs)
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-03")
 async def test_provider_swap_via_config(mock_litellm_response):
     """LLM-03: Swapping to openai/ provider requires only config change."""
     from argus.llm.router import LLMRouter
@@ -56,7 +53,6 @@ async def test_provider_swap_via_config(mock_litellm_response):
         assert "openai/gpt-4o" in str(call_kwargs)
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-03")
 async def test_per_state_model_selection(mock_litellm_response, sample_config):
     """COST-01: PLAN uses Opus, EXECUTE uses Sonnet, COMMIT makes no LLM call."""
     from argus.llm.router import LLMRouter
@@ -80,7 +76,6 @@ async def test_per_state_model_selection(mock_litellm_response, sample_config):
         assert result == {}
 
 
-@pytest.mark.xfail(raises=NotImplementedError, strict=True, reason="Plan 03-03")
 async def test_per_task_override_supersedes_state(mock_litellm_response, sample_config):
     """COST-02: Per-task override has highest priority over per-state config."""
     from argus.llm.router import LLMRouter
