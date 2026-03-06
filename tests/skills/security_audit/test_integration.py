@@ -1,8 +1,7 @@
-"""Integration xfail stubs for Security Audit skill."""
+"""Integration tests for Security Audit skill."""
 import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_clean_manifest_passes(tmp_path):
     from argus.skills.security_audit import run
 
@@ -11,13 +10,13 @@ def test_clean_manifest_passes(tmp_path):
         "name: clean-skill\nversion: '1.0.0'\ntrust_tier: community\n"
         "permissions: []\ncontent_hash: 'sha256:" + "a" * 64 + "'\n"
         "blast_radius: local\nidempotent: true\ntimeout_s: 30.0\n"
+        "description: 'A clean test skill'\n"
     )
     report = run(tmp_path)
     assert report.passed is True
     assert report.findings == []
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_dirty_manifest_fails(tmp_path):
     from argus.skills.security_audit import run
 
