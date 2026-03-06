@@ -1,8 +1,7 @@
-"""Integration xfail stubs for OWASP Top 10 skill."""
+"""Integration tests for OWASP Top 10 skill."""
 import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_clean_config_all_pass():
     from argus.skills.owasp_top10 import run
 
@@ -33,7 +32,6 @@ def test_clean_config_all_pass():
     assert report.coverage_pct == 100.0
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_dirty_config_multiple_failures():
     from argus.skills.owasp_top10 import run
 
