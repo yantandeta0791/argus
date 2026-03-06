@@ -1,8 +1,7 @@
-"""Integration xfail stubs for Credential Scanner skill."""
+"""Integration tests for Credential Scanner skill."""
 import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_run_string_context():
     from argus.skills.credential_scanner import run
 
@@ -13,7 +12,6 @@ def test_run_string_context():
     assert report.clean is False
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_run_dict_context():
     from argus.skills.credential_scanner import run
 
@@ -23,7 +21,6 @@ def test_run_dict_context():
     assert any(f.credential_type == "GitHub Token" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_run_clean():
     from argus.skills.credential_scanner import run
 
