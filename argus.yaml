@@ -1,0 +1,32 @@
+# argus.yaml — Argus LLM and cost router configuration
+# API keys come from environment variables — never store them here.
+# ANTHROPIC_API_KEY must be set for Anthropic models.
+# Swap any model string to an openai/ or azure/ prefixed string for provider change (LLM-03).
+
+models:
+  # Default model used when no state or task override is declared
+  default: "anthropic/claude-sonnet-4-6"
+
+  # Per-state model selection (COST-01)
+  # PLAN and REFLECT use Opus for architectural reasoning.
+  # EXECUTE and VERIFY use Sonnet for efficient implementation and checking.
+  # COMMIT: null means no LLM call — the commit state is deterministic code only.
+  states:
+    PLAN: "anthropic/claude-opus-4-6"
+    EXECUTE: "anthropic/claude-sonnet-4-6"
+    VERIFY: "anthropic/claude-sonnet-4-6"
+    REFLECT: "anthropic/claude-opus-4-6"
+    COMMIT: null
+
+  # Per-task model overrides (COST-02)
+  # Task IDs from RunContext.task_id that need a different model than the state default.
+  # Example: tasks: { summarize: "anthropic/claude-haiku-3-5" }
+  tasks: {}
+
+spend:
+  # Hard spend caps — Argus fires ABORT when any cap is exceeded (COST-03).
+  # Set to a float value (USD) to enable. null = no cap for that dimension.
+  # Note: per_day_usd requires Phase 4 SQLite persistence to enforce across runs.
+  per_task_usd: null
+  per_session_usd: null
+  per_day_usd: null
