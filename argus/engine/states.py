@@ -13,7 +13,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, TYPE_CHECKING, runtime_checkable
+
+if TYPE_CHECKING:
+    from argus.llm.tracker import StateCostEntry
 
 
 class TaskState(StrEnum):
@@ -58,6 +61,7 @@ class RunResult:
     artifacts: dict[str, Any]
     error: str | None = None
     success: bool = True
+    cost_breakdown: list["StateCostEntry"] = field(default_factory=list)  # Phase 3: per-state cost records
 
 
 @runtime_checkable
