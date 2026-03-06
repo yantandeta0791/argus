@@ -1,8 +1,7 @@
-"""xfail stubs for OWASP Agentic Top 10 — ASI01 through ASI10."""
+"""Tests for OWASP Agentic Top 10 — ASI01 through ASI10."""
 import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi01_prompt_injection():
     from argus.skills.owasp_top10 import run
 
@@ -15,7 +14,6 @@ def test_asi01_prompt_injection():
     assert any(c.category_id == "ASI01" and not c.passed for c in report.categories)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi02_excessive_permissions():
     from argus.skills.owasp_top10 import run
 
@@ -28,7 +26,6 @@ def test_asi02_excessive_permissions():
     assert any(c.category_id == "ASI02" and not c.passed for c in report.categories)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi03_sensitive_data_exposure():
     from argus.skills.owasp_top10 import run
 
@@ -42,7 +39,6 @@ def test_asi03_sensitive_data_exposure():
     assert any(c.category_id == "ASI03" and not c.passed for c in report.categories)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi04_data_model_poisoning():
     from argus.skills.owasp_top10 import run
 
@@ -60,7 +56,6 @@ def test_asi04_data_model_poisoning():
     assert any(c.category_id == "ASI04" and not c.passed for c in report.categories)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi05_supply_chain():
     from argus.skills.owasp_top10 import run
 
@@ -73,7 +68,6 @@ def test_asi05_supply_chain():
     assert any(c.category_id == "ASI05" and not c.passed for c in report.categories)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi06_unsafe_actions():
     from argus.skills.owasp_top10 import run
 
@@ -91,7 +85,6 @@ def test_asi06_unsafe_actions():
     assert any(c.category_id == "ASI06" and not c.passed for c in report.categories)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi07_resource_exhaustion():
     from argus.skills.owasp_top10 import run
 
@@ -104,7 +97,6 @@ def test_asi07_resource_exhaustion():
     assert any(c.category_id == "ASI07" and not c.passed for c in report.categories)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi08_inadequate_monitoring():
     from argus.skills.owasp_top10 import run
 
@@ -117,7 +109,6 @@ def test_asi08_inadequate_monitoring():
     assert any(c.category_id == "ASI08" and not c.passed for c in report.categories)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi09_excessive_agency():
     from argus.skills.owasp_top10 import run
 
@@ -131,7 +122,6 @@ def test_asi09_excessive_agency():
     assert any(c.category_id == "ASI09" and not c.passed for c in report.categories)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_asi10_misinformation_risk():
     from argus.skills.owasp_top10 import run
 
