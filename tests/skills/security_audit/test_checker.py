@@ -1,8 +1,7 @@
-"""xfail stubs for Security Audit checker — SA-001 through SA-007."""
+"""Tests for Security Audit checker — SA-001 through SA-007."""
 import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_sa001_missing_required_fields(tmp_path):
     from argus.skills.security_audit import run
     from argus.skills.security_audit.findings import Severity
@@ -16,7 +15,6 @@ def test_sa001_missing_required_fields(tmp_path):
     assert any(f.severity == Severity.ERROR for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_sa002_trust_tier_mismatch(tmp_path):
     from argus.skills.security_audit import run
 
@@ -24,12 +22,12 @@ def test_sa002_trust_tier_mismatch(tmp_path):
     (tmp_path / "skill.yaml").write_text(
         "name: external-skill\nversion: '1.0.0'\ntrust_tier: builtin\n"
         "permissions: []\ncontent_hash: 'sha256:" + "a" * 64 + "'\n"
+        "description: 'Test skill'\n"
     )
     report = run(tmp_path)
     assert any(f.rule_id == "SA-002" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_sa003_high_blast_radius_no_egress(tmp_path):
     from argus.skills.security_audit import run
 
@@ -37,13 +35,12 @@ def test_sa003_high_blast_radius_no_egress(tmp_path):
     (tmp_path / "skill.yaml").write_text(
         "name: dangerous-skill\nversion: '1.0.0'\ntrust_tier: community\n"
         "permissions: []\ncontent_hash: 'sha256:" + "a" * 64 + "'\n"
-        "blast_radius: system\negress_allowlist: []\n"
+        "blast_radius: system\negress_allowlist: []\ndescription: 'Test skill'\n"
     )
     report = run(tmp_path)
     assert any(f.rule_id == "SA-003" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_sa004_wildcard_permissions(tmp_path):
     from argus.skills.security_audit import run
 
@@ -51,25 +48,24 @@ def test_sa004_wildcard_permissions(tmp_path):
     (tmp_path / "skill.yaml").write_text(
         "name: wild-skill\nversion: '1.0.0'\ntrust_tier: community\n"
         "permissions: ['*']\ncontent_hash: 'sha256:" + "a" * 64 + "'\n"
+        "description: 'Test skill'\n"
     )
     report = run(tmp_path)
     assert any(f.rule_id == "SA-004" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_sa005_invalid_content_hash_format(tmp_path):
     from argus.skills.security_audit import run
 
     # content_hash missing sha256: prefix
     (tmp_path / "skill.yaml").write_text(
         "name: bad-hash-skill\nversion: '1.0.0'\ntrust_tier: community\n"
-        "permissions: []\ncontent_hash: 'notahash'\n"
+        "permissions: []\ncontent_hash: 'notahash'\ndescription: 'Test skill'\n"
     )
     report = run(tmp_path)
     assert any(f.rule_id == "SA-005" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_sa006_nonidempotent_network_blast(tmp_path):
     from argus.skills.security_audit import run
 
@@ -78,12 +74,12 @@ def test_sa006_nonidempotent_network_blast(tmp_path):
         "name: risky-skill\nversion: '1.0.0'\ntrust_tier: community\n"
         "permissions: []\ncontent_hash: 'sha256:" + "a" * 64 + "'\n"
         "blast_radius: network\nidempotent: false\negress_allowlist: ['api.example.com']\n"
+        "description: 'Test skill'\n"
     )
     report = run(tmp_path)
     assert any(f.rule_id == "SA-006" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_sa007_excessive_timeout(tmp_path):
     from argus.skills.security_audit import run
 
@@ -91,7 +87,7 @@ def test_sa007_excessive_timeout(tmp_path):
     (tmp_path / "skill.yaml").write_text(
         "name: slow-skill\nversion: '1.0.0'\ntrust_tier: community\n"
         "permissions: []\ncontent_hash: 'sha256:" + "a" * 64 + "'\n"
-        "timeout_s: 600.0\n"
+        "timeout_s: 600.0\ndescription: 'Test skill'\n"
     )
     report = run(tmp_path)
     assert any(f.rule_id == "SA-007" for f in report.findings)
