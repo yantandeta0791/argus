@@ -2,7 +2,8 @@
 
 Proves the full memory hierarchy works end-to-end:
 - MEM-01: working memory isolation per run
-- MEM-02: session facts persist across runs
+- MEM-02: session facts persist across runs, session isolation enforced
+- MEM-03: global facts visible across sessions
 - Handler receives store parameter from StateMachine
 """
 
@@ -92,3 +93,33 @@ async def test_working_memory_isolation(tmp_db_path):
     r2 = await sm.run(RunContext(task_id="run-2", task_input={}))
     assert r1.artifacts["marker"] == "run-1"
     assert r2.artifacts["marker"] == "run-2"
+
+
+async def test_session_isolation_across_sessions(tmp_db_path):
+    """MEM-02: session A facts are not visible in session B."""
+    from argus.memory.manager import MemoryManager, MemoryConfig
+
+    mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
+    await mgr.connect()
+    store_a = mgr.session("session-A")
+    store_b = mgr.session("session-B")
+
+    await store_a.put("secret", "alpha")
+    assert await store_b.get("secret") is None
+    assert await store_a.get("secret") == "alpha"
+    await mgr.close()
+
+
+async def test_global_fact_visible_across_sessions(tmp_db_path):
+    """MEM-03: global fact written in session A is queryable in session B."""
+    from argus.memory.manager import MemoryManager, MemoryConfig
+
+    mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
+    await mgr.connect()
+    store_a = mgr.session("session-A")
+    store_b = mgr.session("session-B")
+
+    await store_a.put("config_key", {"version": 1}, global_=True)
+    result = await store_b.get("config_key", global_=True)
+    assert result == {"version": 1}
+    await mgr.close()
