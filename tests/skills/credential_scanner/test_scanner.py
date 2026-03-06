@@ -1,8 +1,7 @@
-"""xfail stubs for credential scanner core behavior."""
+"""Tests for credential scanner core behavior."""
 import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_clean_context_no_findings():
     from argus.skills.credential_scanner import run
 
@@ -12,7 +11,6 @@ def test_clean_context_no_findings():
     assert report.findings == []
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_dict_context_serialized():
     from argus.skills.credential_scanner import run
 
@@ -22,7 +20,6 @@ def test_dict_context_serialized():
     assert report.clean is True
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_match_redacted():
     from argus.skills.credential_scanner import run
 
@@ -35,7 +32,6 @@ def test_match_redacted():
     assert len(finding.match) > 4
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_multiple_credentials():
     from argus.skills.credential_scanner import run
 

@@ -1,8 +1,7 @@
-"""xfail stubs for credential scanner patterns — CS-001 through CS-007."""
+"""Tests for credential scanner patterns — CS-001 through CS-007."""
 import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_cs001_aws_access_key():
     from argus.skills.credential_scanner import run
 
@@ -13,7 +12,6 @@ def test_cs001_aws_access_key():
     assert any(f.credential_type == "AWS Access Key" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_cs002_aws_secret_key():
     from argus.skills.credential_scanner import run
 
@@ -23,7 +21,6 @@ def test_cs002_aws_secret_key():
     assert any(f.pattern_id == "CS-002" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_cs003_github_token():
     from argus.skills.credential_scanner import run
 
@@ -34,7 +31,6 @@ def test_cs003_github_token():
     assert any(f.credential_type == "GitHub Token" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_cs004_anthropic_api_key():
     from argus.skills.credential_scanner import run
 
@@ -45,7 +41,6 @@ def test_cs004_anthropic_api_key():
     assert any(f.credential_type == "Anthropic API Key" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_cs005_openai_api_key():
     from argus.skills.credential_scanner import run
 
@@ -56,7 +51,6 @@ def test_cs005_openai_api_key():
     assert any(f.credential_type == "OpenAI API Key" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_cs006_bearer_token():
     from argus.skills.credential_scanner import run
 
@@ -67,7 +61,6 @@ def test_cs006_bearer_token():
     assert any(f.credential_type == "Bearer Token" for f in report.findings)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_cs007_generic_secret():
     from argus.skills.credential_scanner import run
 
