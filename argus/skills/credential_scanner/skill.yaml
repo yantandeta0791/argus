@@ -8,4 +8,4 @@ data_access: []
 egress_allowlist: []
 timeout_s: 30.0
 idempotent: true
-content_hash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+content_hash: "sha256:9d93f61b3bf2fc1acef1d91044ce4ccc02749abafb7e201f20938708c33f685f"
