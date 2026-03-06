@@ -31,3 +31,6 @@ packages = ["argus"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: marks tests that require live API keys (deselect with '-m \"not integration\"')",
+]
