@@ -38,6 +38,14 @@ class EgressViolationError(ArgusSecurityError):
     pass
 
 
+class SkillIntegrityError(ArgusSecurityError):
+    """Raised when a skill's content hash does not match its manifest.
+
+    Distinguishes integrity failures from permission/injection errors.
+    """
+    pass
+
+
 class AuditUnavailableError(ArgusSecurityError):
     """Raised when the audit logger is unavailable.
 

@@ -20,6 +20,7 @@ class GateType(str, Enum):
     SANDBOX = "sandbox"
     PROMPT_SHIELD = "prompt_shield"
     EGRESS = "egress"
+    SKILL_LIFECYCLE = "skill_lifecycle"
 
 
 class SecurityEvent(BaseModel):
