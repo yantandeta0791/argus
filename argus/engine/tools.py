@@ -97,12 +97,15 @@ class ToolRunner:
                    Receives the Pydantic-validated input model, not the raw dict.
         gateway:   SecurityGateway. pre_tool_call and post_tool_call wrap execution.
                    ArgusSecurityError from either gate propagates immediately (not caught here).
+        obs:       ObservabilityManager (optional). on_tool_call() emitted after each call.
+                   None = no-op. Never raises.
     """
 
-    def __init__(self, manifest: ToolManifest, tool_fn: Callable, gateway: Any) -> None:
+    def __init__(self, manifest: ToolManifest, tool_fn: Callable, gateway: Any, obs: Any = None) -> None:
         self._manifest = manifest
         self._tool_fn = tool_fn
         self._gateway = gateway
+        self._obs = obs
 
         # Ensure one circuit breaker wrapper exists for this tool name (module-level)
         if manifest.name not in _CIRCUIT_REGISTRY:
@@ -132,6 +135,8 @@ class ToolRunner:
             CircuitBreakerError:       Circuit is open — subsequent calls fail fast (TOOL-03).
             Exception:                 Original tool exception after max retry attempts.
         """
+        import time as _time
+
         # Step 1: Validate input before calling anything (TOOL-01)
         validated_input = self._manifest.input_schema.model_validate(raw_input)
 
@@ -142,8 +147,28 @@ class ToolRunner:
             validated_input.model_dump(),
         )
 
-        # Step 3: Execute with retry + circuit breaker
-        raw_output = await self._execute_with_resilience(validated_input)
+        # Step 3: Execute with retry + circuit breaker (time for observability)
+        _t0 = _time.monotonic()
+        _error: Exception | None = None
+        try:
+            raw_output = await self._execute_with_resilience(validated_input)
+        except Exception as exc:
+            _error = exc
+            _duration_ms = (_time.monotonic() - _t0) * 1000
+            if self._obs is not None:
+                try:
+                    self._obs.on_tool_call(
+                        self._manifest,
+                        validated_input.model_dump(),
+                        None,
+                        _duration_ms,
+                        error=str(exc),
+                    )
+                except Exception:
+                    pass
+            raise
+
+        _duration_ms = (_time.monotonic() - _t0) * 1000
 
         # Step 4: Security post-call gate on string representation (TOOL-01 output must be clean)
         output_str = json.dumps(raw_output) if isinstance(raw_output, dict) else str(raw_output)
@@ -156,7 +181,21 @@ class ToolRunner:
             clean_dict = {"result": clean_str}
 
         # Step 5: Validate output schema before result enters agent context (TOOL-01)
-        return self._manifest.output_schema.model_validate(clean_dict)
+        result = self._manifest.output_schema.model_validate(clean_dict)
+
+        # Emit tool_call event to observability sink (OBS-01)
+        if self._obs is not None:
+            try:
+                self._obs.on_tool_call(
+                    self._manifest,
+                    validated_input.model_dump(),
+                    clean_dict,
+                    _duration_ms,
+                )
+            except Exception:
+                pass
+
+        return result
 
     async def _execute_with_resilience(self, validated_input: BaseModel) -> Any:
         """Run tool_fn with tenacity retry (outer) and circuit breaker (inner).
