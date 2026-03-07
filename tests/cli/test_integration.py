@@ -6,7 +6,6 @@ from typer.testing import CliRunner
 runner = CliRunner()
 
 
-@pytest.mark.xfail(reason="argus.cli.demo not yet implemented", strict=False)
 def test_demo_timing():
     """Full demo run completes in under 10 seconds (no live LLM — all mocked)."""
     from argus.cli.main import app
