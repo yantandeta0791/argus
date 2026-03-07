@@ -12,7 +12,6 @@ def test_obs_config_defaults():
     assert config.service_name == "argus"
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_manager_on_state_transition_writes_trace(tmp_path):
     from argus.observability.manager import ObservabilityManager, ObsConfig
     from argus.engine.states import RunContext, TaskState
@@ -31,11 +30,10 @@ def test_manager_on_state_transition_writes_trace(tmp_path):
     lines = trace_path.read_text().strip().split("\n")
     data = json.loads(lines[0])
     assert data["event_type"] == "state_transition"
-    assert data["payload"]["from"] == "TaskState.PLAN"
+    assert data["payload"]["from"] == str(TaskState.PLAN)
     assert data["payload"]["duration_ms"] == 10.5
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_manager_disabled_is_noop(tmp_path):
     from argus.observability.manager import ObservabilityManager, ObsConfig
     from argus.engine.states import RunContext, TaskState
@@ -47,7 +45,6 @@ def test_manager_disabled_is_noop(tmp_path):
     assert not trace_path.exists()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_manager_on_star_never_raises(tmp_path):
     """ObservabilityManager.on_* methods must never propagate exceptions."""
     from argus.observability.manager import ObservabilityManager, ObsConfig
@@ -58,7 +55,6 @@ def test_manager_on_star_never_raises(tmp_path):
     mgr.on_security_event(None)
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_manager_on_run_complete_embeds_cost(tmp_path):
     """OBS-03: run_complete payload includes cost_breakdown."""
     from argus.observability.manager import ObservabilityManager, ObsConfig
