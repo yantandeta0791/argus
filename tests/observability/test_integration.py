@@ -54,7 +54,7 @@ async def test_security_stream_receives_gateway_events(tmp_path):
     sec_path = tmp_path / "security.jsonl"
     obs = ObservabilityManager(ObsConfig(security_stream_path=sec_path))
 
-    policy = PolicyConfig(rules=[{"role": "reader", "resource": "read_file", "action": "allow"}])
+    policy = PolicyConfig(rules=[{"role": "reader", "tool": "read_file", "effect": "allow"}])
     audit = AuditLogger(socket_path=str(tmp_path / "audit.sock"))
     gateway = SecurityGateway(
         GatewayConfig(permissions=policy),
