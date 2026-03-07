@@ -6,8 +6,10 @@ from rich.table import Table
 from rich.panel import Panel
 from rich import box
 
-# force_terminal=True ensures Rich writes color codes even inside CliRunner (non-TTY)
-console = Console(force_terminal=True, file=sys.stdout)
+# force_terminal=True ensures Rich writes color codes even inside CliRunner (non-TTY).
+# No explicit file= so Rich resolves sys.stdout lazily — prevents "closed file" errors
+# when pytest re-uses the module across multiple CliRunner invocations.
+console = Console(force_terminal=True)
 
 _SEVERITY_COLORS = {
     "CRITICAL": "bold red",
