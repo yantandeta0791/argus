@@ -1,6 +1,11 @@
-"""argus run — full runtime execution."""
-import typer
+"""argus run — full Argus runtime execution."""
+from __future__ import annotations
+import asyncio
+import os
 from pathlib import Path
+from unittest.mock import MagicMock
+
+import typer
 
 app = typer.Typer()
 
@@ -12,4 +17,78 @@ def run_command(
     trace_dir: Path = typer.Option(Path("./runs"), "--trace-dir", help="Directory for trace output"),
 ) -> None:
     """Execute an agent through the full Argus runtime."""
-    raise NotImplementedError("argus run not yet implemented")
+    # Fail fast: no API key
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        typer.echo("Error: ANTHROPIC_API_KEY environment variable is not set.", err=True)
+        raise typer.Exit(code=2)
+
+    # Fail fast: no config file
+    if not config.exists():
+        typer.echo(f"Error: Config file not found: {config}", err=True)
+        raise typer.Exit(code=2)
+
+    asyncio.run(_run_async(config, task, trace_dir))
+
+
+async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
+    """Wire and run the full Argus runtime stack."""
+    from argus.llm.config import load_config
+    from argus.llm.tracker import SpendTracker
+    from argus.llm.router import LLMRouter
+    from argus.engine.machine import StateMachine
+    from argus.engine.states import RunContext
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+    from argus.memory.manager import MemoryManager, MemoryConfig
+    from argus.observability.manager import ObservabilityManager, ObsConfig
+
+    # Create trace directory
+    trace_dir.mkdir(parents=True, exist_ok=True)
+
+    # Observability — write trace and security stream to trace_dir
+    obs = ObservabilityManager(ObsConfig(
+        trace_path=trace_dir / "trace.jsonl",
+        security_stream_path=trace_dir / "security.jsonl",
+        enabled=True,
+    ))
+
+    # Load config and build LLM stack
+    model_config = load_config(config)
+    tracker = SpendTracker(model_config.spend)
+    router = LLMRouter(config=model_config, tracker=tracker, obs=obs)
+
+    # Security gateway — AuditLogger mocked (no daemon in v1 CLI)
+    mock_audit = MagicMock(spec=AuditLogger)
+    gateway = SecurityGateway(config=GatewayConfig(), audit_logger=mock_audit, obs=obs)
+
+    # Memory — scoped DB to this run's trace_dir
+    memory = MemoryManager(MemoryConfig(db_path=trace_dir / "memory.db"))
+    await memory.connect()
+
+    try:
+        sm = StateMachine(
+            gateway=gateway,
+            cost_hook=tracker.over_budget,
+            llm_callable=router,
+            store=memory.session("run-session"),
+            obs=obs,
+        )
+        ctx = RunContext(
+            task_id="cli-run",
+            task_input={"goal": task if task else "demo task"},
+        )
+        result = await sm.run(ctx)
+        obs.on_run_complete(result)
+        obs.flush()
+
+        if result.success:
+            typer.echo(f"Run complete. Trace written to {trace_dir / 'trace.jsonl'}")
+            raise typer.Exit(code=0)
+        else:
+            typer.echo(
+                f"Run failed: {result.error or 'security violation or cost abort'}",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+    finally:
+        await memory.close()

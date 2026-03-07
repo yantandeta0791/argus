@@ -10,13 +10,13 @@ app = typer.Typer(
 
 
 def _register() -> None:
-    from argus.cli import run as run_mod
+    from argus.cli.run import run_command
     from argus.cli.scan import scan_command
     from argus.cli.demo import demo_command
 
-    app.add_typer(run_mod.app, name="run")
-    # Register scan_command and demo_command directly so they work as first-class
-    # commands (not groups), matching `argus scan <target>` and `argus demo` patterns.
+    # Register all three commands directly so they work as first-class commands
+    # (not groups), matching `argus run`, `argus scan <target>`, `argus demo` patterns.
+    app.command(name="run")(run_command)
     app.command(name="scan")(scan_command)
     app.command(name="demo")(demo_command)
 
