@@ -20,6 +20,7 @@ dependencies = [
     "aiosqlite>=0.22.0",
     "opentelemetry-api>=1.20",
     "opentelemetry-sdk>=1.20",
+    "typer[all]>=0.9",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +28,9 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
 ]
+
+[project.scripts]
+argus = "argus.cli.main:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["argus"]
