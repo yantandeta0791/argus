@@ -39,6 +39,7 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
     from argus.engine.states import RunContext
     from argus.security.gateway import SecurityGateway, GatewayConfig
     from argus.security.audit.logger import AuditLogger
+    from argus.security.redactor.redactor import SecretRedactor
     from argus.memory.manager import MemoryManager, MemoryConfig
     from argus.observability.manager import ObservabilityManager, ObsConfig
 
@@ -55,7 +56,7 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
     # Load config and build LLM stack
     model_config = load_config(config)
     tracker = SpendTracker(model_config.spend)
-    router = LLMRouter(config=model_config, tracker=tracker, obs=obs)
+    router = LLMRouter(config=model_config, tracker=tracker, obs=obs, redactor=SecretRedactor())
 
     # Security gateway — AuditLogger mocked (no daemon in v1 CLI)
     mock_audit = MagicMock(spec=AuditLogger)
@@ -78,6 +79,7 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
             task_input={"goal": task if task else "demo task"},
         )
         result = await sm.run(ctx)
+        result.cost_breakdown = tracker.entries()  # populate per-state cost data (OBS-03)
         obs.on_run_complete(result)
         obs.flush()
 
