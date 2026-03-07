@@ -1,7 +1,6 @@
 import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_otel_emitter_llm_call_span():
     from argus.observability.otel import OtelEmitter
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -24,7 +23,6 @@ def test_otel_emitter_llm_call_span():
     assert spans[0].attributes["gen_ai.operation.name"] == "chat"
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_otel_emitter_state_transition_span():
     from argus.observability.otel import OtelEmitter
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -39,7 +37,6 @@ def test_otel_emitter_state_transition_span():
     assert spans[0].attributes["argus.run_id"] == "run-1"
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_file_span_exporter_writes_jsonl(tmp_path):
     from argus.observability.otel import FileSpanExporter, OtelEmitter
     path = tmp_path / "spans.jsonl"
@@ -62,7 +59,6 @@ def test_file_span_exporter_writes_jsonl(tmp_path):
     assert span_data["name"] == "gen_ai.client.operation"
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_file_span_exporter_creates_parent_dirs(tmp_path):
     from argus.observability.otel import FileSpanExporter
     path = tmp_path / "runs" / "abc" / "spans.jsonl"
