@@ -12,6 +12,7 @@ Phase 2 state handlers are stubs; they receive llm_callable but do not call it.
 from __future__ import annotations
 
 import copy
+import time
 from typing import Any, Callable
 
 from argus.engine.states import TaskState, RunContext, RunResult, LLMCallable
@@ -60,11 +61,13 @@ class StateMachine:
         handlers: dict[TaskState, Any] | None = None,
         llm_callable: LLMCallable | None = None,
         store: Any = None,
+        obs: Any = None,
     ) -> None:
         self._gateway = gateway
         self._cost_hook = cost_hook
         self._llm_callable = llm_callable
         self._store = store
+        self._obs = obs
         # Resolve handlers -- missing states fall back to no-op (STM-01: all 5 states must fire)
         self._handlers: dict[TaskState, Any] = {
             state: (handlers or {}).get(state, _noop_handler)
@@ -97,22 +100,32 @@ class StateMachine:
                         success=False,
                     )
 
+                prior_state = context.current_state  # capture before updating
+
                 # Set current state (observable by handlers via context.current_state)
                 context.current_state = state
 
                 # Dispatch to handler -- handler mutates context.artifacts (STM-01)
                 # Phase 4: store passed as keyword argument for backward compatibility
+                state_start = time.monotonic()
                 handler = self._handlers[state]
                 await handler(context, self._llm_callable, store=self._store)
+                duration_ms = (time.monotonic() - state_start) * 1000
+
+                if self._obs:
+                    self._obs.on_state_transition(prior_state, state, context, duration_ms)
 
             # All 5 states completed -- run is successful
-            return RunResult(
+            result = RunResult(
                 task_id=context.task_id,
                 final_state=TaskState.COMMIT,
                 artifacts=context.artifacts,
                 error=None,
                 success=True,
             )
+            if self._obs:
+                self._obs.on_run_complete(result)
+            return result
 
         except Exception as exc:
             # Rollback working memory to pre-run snapshot (STM-03)

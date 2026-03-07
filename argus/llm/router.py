@@ -43,6 +43,7 @@ class LLMRouter:
         config: ModelConfig,
         tracker: SpendTracker,
         redactor: Any | None = None,
+        obs: Any = None,
     ) -> None:
         """
         Args:
@@ -51,10 +52,13 @@ class LLMRouter:
             redactor: Optional SecretRedactor from argus.security -- redacts secrets
                       from RunContext.task_input before sending to LLM (SEC-03).
                       If None, no redaction is applied (safe for unit tests with dummy data).
+            obs:      Optional ObservabilityManager -- records LLM call telemetry (OBS-02).
+                      If None, no observability data is emitted.
         """
         self._config = config
         self._tracker = tracker
         self._redactor = redactor
+        self._obs = obs
 
     async def __call__(self, context: RunContext) -> dict[str, Any]:
         """Select model, call LiteLLM, record cost, return response dict.
@@ -85,6 +89,15 @@ class LLMRouter:
             cost_usd=response._hidden_params.get("response_cost", 0.0),
         )
         self._tracker.record(entry)
+
+        if self._obs:
+            self._obs.on_llm_call(
+                model=model,
+                state=str(context.current_state),
+                usage={"input": entry.input_tokens, "output": entry.output_tokens},
+                cost_usd=entry.cost_usd,
+                duration_ms=0.0,
+            )
 
         return {"response": response.choices[0].message.content}
 

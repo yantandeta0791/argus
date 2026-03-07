@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from argus.security.exceptions import ArgusSecurityError
 from argus.security.permission.enforcer import PermissionEnforcer
 from argus.security.permission.policy import PolicyConfig
 from argus.security.prompt_shield.shield import PromptShield
@@ -40,16 +41,23 @@ class SecurityGateway:
     Agents run INSIDE Argus — no LLM output, no agent config can bypass these gates.
     """
 
-    def __init__(self, config: GatewayConfig, audit_logger: AuditLogger):
+    def __init__(self, config: GatewayConfig, audit_logger: AuditLogger, obs: Any = None):
         self._permission = PermissionEnforcer(config.permissions)
         self._shield = PromptShield(extra_patterns=config.prompt_shield_patterns or None)
         self._redactor = SecretRedactor()
         self._audit = audit_logger
-        # EgressChecker with a simple in-memory event sink (Phase 7 replaces with stream sink)
+        self._obs = obs
+        # EgressChecker with a closure sink that forwards to obs if configured (Phase 7)
         self._security_events: list[SecurityEvent] = []
+
+        def _egress_sink(event: SecurityEvent) -> None:
+            self._security_events.append(event)
+            if self._obs:
+                self._obs.on_security_event(event)
+
         self._egress = EgressChecker(
             allowlist=config.egress_allowlist,
-            event_sink=self._security_events.append,
+            event_sink=_egress_sink,
         )
 
     def pre_tool_call(
@@ -65,7 +73,19 @@ class SecurityGateway:
         Returns tool_input unchanged.
         """
         # Gate 1: Permission (hard stop)
-        self._permission.enforce(agent_role, tool_name)
+        try:
+            self._permission.enforce(agent_role, tool_name)
+        except ArgusSecurityError as exc:
+            if self._obs:
+                event = SecurityEvent(
+                    gate=GateType.PERMISSION,
+                    outcome="blocked",
+                    agent_role=agent_role,
+                    tool_name=tool_name,
+                    rule_triggered=getattr(exc, "rule", None),
+                )
+                self._obs.on_security_event(event)
+            raise
 
         # Gate 2: Audit pre-call (hard stop — fail-closed)
         self._audit.send({
@@ -92,7 +112,18 @@ class SecurityGateway:
         Returns clean (redacted) output.
         """
         # Gate 3: Prompt injection scan (hard stop)
-        self._shield.scan(tool_output)
+        try:
+            self._shield.scan(tool_output)
+        except ArgusSecurityError as exc:
+            if self._obs:
+                event = SecurityEvent(
+                    gate=GateType.PROMPT_SHIELD,
+                    outcome="blocked",
+                    tool_name="[post_tool_call]",
+                    rule_triggered=getattr(exc, "rule", None),
+                )
+                self._obs.on_security_event(event)
+            raise
 
         # Gate 4: Secret/PII redaction (soft block — run continues with scrubbed data)
         clean_output = self._redactor.redact(tool_output)
