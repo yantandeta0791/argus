@@ -7,7 +7,6 @@ from typer.testing import CliRunner
 runner = CliRunner()
 
 
-@pytest.mark.xfail(reason="argus.cli.scan not yet implemented", strict=False)
 def test_scan_clean_exits_zero(tmp_path):
     """A skill directory with no violations exits 0."""
     from argus.cli.main import app
@@ -17,7 +16,6 @@ def test_scan_clean_exits_zero(tmp_path):
     assert result.exit_code == 0
 
 
-@pytest.mark.xfail(reason="argus.cli.scan not yet implemented", strict=False)
 def test_scan_dirty_exits_one(tmp_path):
     """A skill directory with ERROR/CRITICAL findings exits 1."""
     from argus.cli.main import app
@@ -29,7 +27,6 @@ def test_scan_dirty_exits_one(tmp_path):
     assert result.exit_code == 1
 
 
-@pytest.mark.xfail(reason="argus.cli.scan not yet implemented", strict=False)
 def test_scan_missing_target_exits_two(tmp_path):
     """A non-existent target path exits 2."""
     from argus.cli.main import app
@@ -37,7 +34,6 @@ def test_scan_missing_target_exits_two(tmp_path):
     assert result.exit_code == 2
 
 
-@pytest.mark.xfail(reason="argus.cli.scan not yet implemented", strict=False)
 def test_scan_json_format(tmp_path):
     """--format json outputs valid JSON to stdout."""
     from argus.cli.main import app
