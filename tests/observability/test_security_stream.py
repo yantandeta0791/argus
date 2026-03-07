@@ -1,7 +1,6 @@
 import pytest
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_security_event_writer_writes_jsonl(tmp_path):
     from argus.observability.security_stream import SecurityEventWriter
     from argus.security.events import SecurityEvent, GateType
@@ -24,7 +23,6 @@ def test_security_event_writer_writes_jsonl(tmp_path):
     assert data["outcome"] == "blocked"
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_security_event_writer_none_path_is_noop():
     """OBS-04: path=None silently discards events — no error raised."""
     from argus.observability.security_stream import SecurityEventWriter
@@ -35,7 +33,6 @@ def test_security_event_writer_none_path_is_noop():
     writer.flush()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_security_stream_independent_of_trace(tmp_path):
     """OBS-04: security stream does not depend on trace path."""
     from argus.observability.security_stream import SecurityEventWriter
@@ -51,7 +48,6 @@ def test_security_stream_independent_of_trace(tmp_path):
     assert data["gate"] == "prompt_shield"
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_security_event_writer_creates_parent_dirs(tmp_path):
     from argus.observability.security_stream import SecurityEventWriter
     from argus.security.events import SecurityEvent, GateType
