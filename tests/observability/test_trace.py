@@ -14,7 +14,6 @@ def test_trace_event_dataclass_fields():
     assert evt.run_id == "test-run-id"
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_trace_writer_writes_jsonl(tmp_path):
     from argus.observability.trace import TraceEvent, TraceWriter
     import json
@@ -35,7 +34,6 @@ def test_trace_writer_writes_jsonl(tmp_path):
     assert data["run_id"] == "run-1"
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_trace_writer_appends_multiple_events(tmp_path):
     from argus.observability.trace import TraceEvent, TraceWriter
     path = tmp_path / "trace.jsonl"
@@ -52,7 +50,6 @@ def test_trace_writer_appends_multiple_events(tmp_path):
     assert len(lines) == 3
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_trace_writer_creates_parent_dirs(tmp_path):
     from argus.observability.trace import TraceEvent, TraceWriter
     path = tmp_path / "runs" / "abc123" / "trace.jsonl"
@@ -66,7 +63,6 @@ def test_trace_writer_creates_parent_dirs(tmp_path):
     assert path.exists()
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
 def test_run_complete_cost_breakdown(tmp_path):
     """OBS-03: cost_breakdown readable from trace without other files."""
     from argus.observability.trace import TraceEvent, TraceWriter
