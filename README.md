@@ -1,10 +1,14 @@
-# Argus — Deterministic Security Enforcement for AI Agents
+<div align="center">
+  <img src="docs/assets/argus-banner.png" alt="Argus" width="600"/>
 
-Wrap any AI agent with sandboxed execution, permission enforcement, audit logging, cost control, and full observability — enforced by deterministic code the LLM cannot override.
+  <h1>Argus — Deterministic Security Enforcement for AI Agents</h1>
 
-![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
-![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green)
-![Tests 160 passing](https://img.shields.io/badge/tests-160%20passing-brightgreen)
+  <p>Wrap any AI agent with sandboxed execution, permission enforcement, audit logging, cost control, and full observability — enforced by deterministic code the LLM cannot override.</p>
+
+  ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
+  ![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green)
+  ![Tests 160 passing](https://img.shields.io/badge/tests-160%20passing-brightgreen)
+</div>
 
 ## What is Argus?
 
