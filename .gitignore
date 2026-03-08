@@ -50,3 +50,7 @@ Thumbs.db
 runs/
 *.jsonl
 *.db
+
+# AI workflow planning (internal — not for public consumption)
+.planning/
+.claude/
