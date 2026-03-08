@@ -1,7 +1,3 @@
-import pytest
-
-
-@pytest.mark.xfail(strict=False)
 async def test_full_run_produces_trace_and_security_and_spans(tmp_path):
     """End-to-end: StateMachine run with obs= produces all 3 output files."""
     from argus.observability.manager import ObservabilityManager, ObsConfig
@@ -42,7 +38,6 @@ async def test_full_run_produces_trace_and_security_and_spans(tmp_path):
     assert "run_complete" in event_types
 
 
-@pytest.mark.xfail(strict=False)
 async def test_security_stream_receives_gateway_events(tmp_path):
     """OBS-04: SecurityGateway fires obs.on_security_event for permission blocks."""
     from argus.observability.manager import ObservabilityManager, ObsConfig
@@ -73,11 +68,3 @@ async def test_security_stream_receives_gateway_events(tmp_path):
     data = json.loads(lines[0])
     assert data["gate"] == "permission"
     assert data["outcome"] == "blocked"
-
-
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
-def test_all_132_existing_tests_unaffected():
-    """Regression guard: new obs= kwargs must not break existing tests."""
-    # This test is a documentation stub — the actual regression guard is
-    # running the full suite: pytest -x -q (must show 132+ passed)
-    raise NotImplementedError
