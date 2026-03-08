@@ -5,9 +5,9 @@
 
   <p>Wrap any AI agent with sandboxed execution, permission enforcement, audit logging, cost control, and full observability — enforced by deterministic code the LLM cannot override.</p>
 
-  ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
-  ![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green)
-  ![Tests 160 passing](https://img.shields.io/badge/tests-160%20passing-brightgreen)
+  [![CI](https://github.com/yantandeta0791/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/yantandeta0791/argus/actions/workflows/ci.yml)
+  [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+  [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
 </div>
 
 ## What is Argus?
@@ -449,6 +449,50 @@ print(owasp.coverage_pct)   # percentage of categories passing
 audit = audit_run(Path("./my_skill"))
 for f in audit.findings:
     print(f.rule_id, f.severity, f.message)
+```
+
+## LangChain Integration
+
+Install with the LangChain extra:
+
+```bash
+pip install "argus[langchain]"
+```
+
+Wrap any LangChain tools with Argus security enforcement:
+
+```python
+from argus.adapters.langchain import wrap_tools
+from argus.security.gateway import SecurityGateway, GatewayConfig
+from argus.security.audit.daemon import AuditDaemon
+from argus.security.audit.logger import AuditLogger
+
+with AuditDaemon(socket_path="/tmp/audit.sock", log_path="audit.jsonl") as daemon:
+    audit_logger = AuditLogger("/tmp/audit.sock")
+    gateway = SecurityGateway(config=GatewayConfig(), audit_logger=audit_logger)
+    safe_tools = wrap_tools(your_tools, gateway=gateway, agent_role="my_agent")
+```
+
+Every tool call flows through the SecurityGateway before execution. Permission checks, prompt injection scanning, secret redaction, and audit logging all apply automatically.
+
+## Docker
+
+Build the image:
+
+```bash
+docker build -t argus .
+```
+
+Run the demo:
+
+```bash
+docker run argus
+```
+
+Or use Docker Compose:
+
+```bash
+docker compose up
 ```
 
 ## Development
