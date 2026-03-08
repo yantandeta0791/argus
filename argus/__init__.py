@@ -15,7 +15,7 @@ from argus.security.events import SecurityEvent, GateType
 from argus.security.gateway import SecurityGateway, GatewayConfig
 from argus.security.audit.chain import verify_chain
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     # Exceptions (Phase 2 catches these at state machine boundary)
