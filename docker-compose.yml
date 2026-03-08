@@ -1,0 +1,9 @@
+services:
+  argus:
+    build: .
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - NO_COLOR=1
+    volumes:
+      - ./runs:/home/argus/runs
+    command: demo
