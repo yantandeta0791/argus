@@ -1,0 +1,12 @@
+.git
+.github
+.planning
+.venv
+__pycache__
+*.pyc
+tests/
+docs/
+*.md
+!README.md
+.env
+runs/
