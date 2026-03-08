@@ -1,15 +1,19 @@
 """Rich terminal output helpers for Argus CLI."""
 from __future__ import annotations
+import os
 import sys
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich import box
 
-# force_terminal=True ensures Rich writes color codes even inside CliRunner (non-TTY).
+# Respect NO_COLOR (https://no-color.org/) and detect real TTYs so Rich
+# does not emit ANSI escape codes in Docker logs / CI pipelines.
+_force_terminal = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
 # No explicit file= so Rich resolves sys.stdout lazily — prevents "closed file" errors
 # when pytest re-uses the module across multiple CliRunner invocations.
-console = Console(force_terminal=True)
+console = Console(force_terminal=_force_terminal)
 
 _SEVERITY_COLORS = {
     "CRITICAL": "bold red",
