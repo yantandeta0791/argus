@@ -5,6 +5,7 @@ Usage: python -m argus.security.audit.log_process <socket_path> <log_file>
 Spawned automatically by Argus at run start.
 Runs until the parent process terminates (SIGTERM or SIGINT).
 """
+
 import asyncio
 import json
 import os

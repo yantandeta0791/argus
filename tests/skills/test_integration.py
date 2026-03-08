@@ -3,6 +3,7 @@
 Proves the full skill architecture works: manifest load -> hash verify ->
 lifecycle execute -> revoke, and that hash mismatches block installation.
 """
+
 import pytest
 import yaml
 
@@ -14,7 +15,8 @@ def test_install_verify_execute_revoke(tmp_skill_dir, mock_isolator):
 
     events = []
     manager = SkillLifecycleManager(
-        isolator=mock_isolator, event_sink=events.append,
+        isolator=mock_isolator,
+        event_sink=events.append,
     )
     result = manager.run_lifecycle(tmp_skill_dir)
 
@@ -32,7 +34,15 @@ def test_install_verify_execute_revoke(tmp_skill_dir, mock_isolator):
 
     # Check all stages represented
     stages = {e.metadata["stage"] for e in events}
-    for expected in ["install", "verify", "sandbox", "execute", "monitor", "report", "revoke"]:
+    for expected in [
+        "install",
+        "verify",
+        "sandbox",
+        "execute",
+        "monitor",
+        "report",
+        "revoke",
+    ]:
         assert expected in stages, f"Missing stage: {expected}"
 
 
@@ -49,7 +59,8 @@ def test_hash_mismatch_blocks_install(tmp_skill_dir, mock_isolator):
 
     events = []
     manager = SkillLifecycleManager(
-        isolator=mock_isolator, event_sink=events.append,
+        isolator=mock_isolator,
+        event_sink=events.append,
     )
 
     with pytest.raises(SkillIntegrityError, match="hash mismatch"):
@@ -69,9 +80,6 @@ def test_public_api_imports():
     from argus.skills import (
         BlastRadius,
         LIFECYCLE_SEQUENCE,
-        SkillLifecycleManager,
-        SkillManifest,
-        SkillRegistry,
         SkillStage,
         TrustTier,
         compute_content_hash,
@@ -79,6 +87,7 @@ def test_public_api_imports():
         validate_trust_tier,
         verify_content_hash,
     )
+
     # Type checks
     assert len(TrustTier) == 4
     assert len(BlastRadius) == 4

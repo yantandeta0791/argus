@@ -19,15 +19,23 @@ async def test_handler_receives_store():
     async def capturing_handler(context, llm, *, store=None):
         captured_store.append(store)
 
-    handlers = {s: capturing_handler for s in [
-        TaskState.PLAN, TaskState.EXECUTE, TaskState.VERIFY,
-        TaskState.REFLECT, TaskState.COMMIT,
-    ]}
+    handlers = {
+        s: capturing_handler
+        for s in [
+            TaskState.PLAN,
+            TaskState.EXECUTE,
+            TaskState.VERIFY,
+            TaskState.REFLECT,
+            TaskState.COMMIT,
+        ]
+    }
     mock_store = MagicMock()
     gw = MagicMock()
     sm = StateMachine(
-        gateway=gw, cost_hook=lambda: False,
-        handlers=handlers, store=mock_store,
+        gateway=gw,
+        cost_hook=lambda: False,
+        handlers=handlers,
+        store=mock_store,
     )
     ctx = RunContext(task_id="t1", task_input={})
     await sm.run(ctx)
@@ -56,13 +64,21 @@ async def test_session_fact_persists_across_runs(tmp_db_path):
             context.artifacts["read_step"] = val
 
     gw = MagicMock()
-    sm1 = StateMachine(gateway=gw, cost_hook=lambda: False,
-                       handlers={TaskState.PLAN: writer}, store=store)
+    sm1 = StateMachine(
+        gateway=gw,
+        cost_hook=lambda: False,
+        handlers={TaskState.PLAN: writer},
+        store=store,
+    )
     ctx1 = RunContext(task_id="run1", task_input={"step": "first"})
     await sm1.run(ctx1)
 
-    sm2 = StateMachine(gateway=gw, cost_hook=lambda: False,
-                       handlers={TaskState.PLAN: reader}, store=store)
+    sm2 = StateMachine(
+        gateway=gw,
+        cost_hook=lambda: False,
+        handlers={TaskState.PLAN: reader},
+        store=store,
+    )
     ctx2 = RunContext(task_id="run2", task_input={"step": "second"})
     r2 = await sm2.run(ctx2)
 
@@ -83,10 +99,16 @@ async def test_working_memory_isolation(tmp_db_path):
     async def marker_handler(context, llm, *, store=None):
         context.artifacts["marker"] = context.task_id
 
-    handlers = {s: marker_handler for s in [
-        TaskState.PLAN, TaskState.EXECUTE, TaskState.VERIFY,
-        TaskState.REFLECT, TaskState.COMMIT,
-    ]}
+    handlers = {
+        s: marker_handler
+        for s in [
+            TaskState.PLAN,
+            TaskState.EXECUTE,
+            TaskState.VERIFY,
+            TaskState.REFLECT,
+            TaskState.COMMIT,
+        ]
+    }
     gw = MagicMock()
     sm = StateMachine(gateway=gw, cost_hook=lambda: False, handlers=handlers)
     r1 = await sm.run(RunContext(task_id="run-1", task_input={}))

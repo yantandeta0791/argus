@@ -5,6 +5,7 @@ async def test_schema_init(tmp_db_path):
     """MEM-03: connect creates tables, user_version=1."""
     from argus.memory.manager import MemoryManager, MemoryConfig
     import aiosqlite
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     # Verify schema via direct connection
@@ -25,6 +26,7 @@ async def test_schema_init(tmp_db_path):
 async def test_connect_creates_db_file(tmp_db_path):
     """MEM-03: after connect, db file exists on disk."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     assert not tmp_db_path.exists()
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
@@ -36,6 +38,7 @@ async def test_session_returns_store(tmp_db_path):
     """MEM-02: session() returns a SessionStore instance."""
     from argus.memory.manager import MemoryManager, MemoryConfig
     from argus.memory.store import SessionStore
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     store = mgr.session("test-sid")
@@ -47,6 +50,7 @@ async def test_session_returns_store(tmp_db_path):
 async def test_close_closes_connection(tmp_db_path):
     """MEM-03: after close, connection is None."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     await mgr.close()

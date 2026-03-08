@@ -12,6 +12,7 @@ SA-007: WARNING when timeout_s > 300.
 Rules execute in order SA-001..SA-007; SA-001 short-circuits if the manifest
 cannot be loaded (no further rules run on a broken manifest).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -55,7 +56,7 @@ def check_manifest(target: Path) -> list[Finding]:
                     severity=Severity.ERROR,
                     message=(
                         "content_hash format is invalid; expected 'sha256:' "
-                        f"followed by 64 hex characters"
+                        "followed by 64 hex characters"
                     ),
                     location="skill.yaml:content_hash",
                     remediation=(
@@ -108,7 +109,10 @@ def check_manifest(target: Path) -> list[Finding]:
             )
 
     # ------------------------------------------------------------------ SA-003
-    if manifest.blast_radius in {BlastRadius.SYSTEM, BlastRadius.NETWORK} and not manifest.egress_allowlist:
+    if (
+        manifest.blast_radius in {BlastRadius.SYSTEM, BlastRadius.NETWORK}
+        and not manifest.egress_allowlist
+    ):
         findings.append(
             Finding(
                 rule_id="SA-003",

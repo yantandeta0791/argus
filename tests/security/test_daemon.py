@@ -1,7 +1,7 @@
 """Tests for AuditDaemon subprocess lifecycle manager."""
+
 import os
 import socket
-import time
 
 import pytest
 
@@ -51,7 +51,7 @@ class TestStopTerminatesProcess:
         sock_path, log_path = daemon_paths
         daemon = AuditDaemon(socket_path=sock_path, log_path=log_path)
         daemon.start()
-        pid = daemon.pid
+        assert daemon.pid is not None
         daemon.stop()
         assert daemon.is_alive() is False
         assert daemon.pid is None

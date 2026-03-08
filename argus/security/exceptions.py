@@ -25,16 +25,19 @@ class ArgusSecurityError(Exception):
 
 class PermissionDeniedError(ArgusSecurityError):
     """Raised when a tool call is denied by the permission gate."""
+
     pass
 
 
 class InjectionDetectedError(ArgusSecurityError):
     """Raised when prompt injection is detected by the prompt shield gate."""
+
     pass
 
 
 class EgressViolationError(ArgusSecurityError):
     """Raised when an egress violation is detected by the egress gate."""
+
     pass
 
 
@@ -43,6 +46,7 @@ class SkillIntegrityError(ArgusSecurityError):
 
     Distinguishes integrity failures from permission/injection errors.
     """
+
     pass
 
 

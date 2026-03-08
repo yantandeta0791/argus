@@ -2,7 +2,7 @@ async def test_full_run_produces_trace_and_security_and_spans(tmp_path):
     """End-to-end: StateMachine run with obs= produces all 3 output files."""
     from argus.observability.manager import ObservabilityManager, ObsConfig
     from argus.engine.machine import StateMachine
-    from argus.engine.states import RunContext, TaskState
+    from argus.engine.states import RunContext
     from argus.security.gateway import SecurityGateway, GatewayConfig
     from argus.security.audit.logger import AuditLogger
     import json
@@ -33,7 +33,7 @@ async def test_full_run_produces_trace_and_security_and_spans(tmp_path):
     assert trace_path.exists()
     assert spans_path.exists()
     lines = trace_path.read_text().strip().split("\n")
-    event_types = [json.loads(l)["event_type"] for l in lines]
+    event_types = [json.loads(line)["event_type"] for line in lines]
     assert "state_transition" in event_types
     assert "run_complete" in event_types
 
@@ -49,7 +49,9 @@ async def test_security_stream_receives_gateway_events(tmp_path):
     sec_path = tmp_path / "security.jsonl"
     obs = ObservabilityManager(ObsConfig(security_stream_path=sec_path))
 
-    policy = PolicyConfig(rules=[{"role": "reader", "tool": "read_file", "effect": "allow"}])
+    policy = PolicyConfig(
+        rules=[{"role": "reader", "tool": "read_file", "effect": "allow"}]
+    )
     audit = AuditLogger(socket_path=str(tmp_path / "audit.sock"))
     gateway = SecurityGateway(
         GatewayConfig(permissions=policy),
@@ -57,7 +59,9 @@ async def test_security_stream_receives_gateway_events(tmp_path):
         obs=obs,
     )
     try:
-        gateway.pre_tool_call(agent_role="reader", tool_name="delete_file", tool_input={})
+        gateway.pre_tool_call(
+            agent_role="reader", tool_name="delete_file", tool_input={}
+        )
     except Exception:
         pass  # permission block is expected
     obs.flush()

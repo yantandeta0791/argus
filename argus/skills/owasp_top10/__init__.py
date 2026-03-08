@@ -1,4 +1,5 @@
 """OWASP Agentic Top 10 skill — tests agent config against ASI01-ASI10."""
+
 from __future__ import annotations
 from datetime import datetime, timezone
 

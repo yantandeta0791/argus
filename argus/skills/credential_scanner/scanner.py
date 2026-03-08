@@ -1,4 +1,5 @@
 """Scan logic — finds credential matches in text."""
+
 from __future__ import annotations
 
 from argus.skills.credential_scanner.patterns import PATTERNS

@@ -1,6 +1,6 @@
 def test_env_stripping(tmp_path):
-    import os
     from argus.security.sandbox.isolator import SkillIsolator
+
     isolator = SkillIsolator()
     # Write a skill that prints its environment
     skill = tmp_path / "check_env.py"
@@ -10,6 +10,7 @@ def test_env_stripping(tmp_path):
         skill_package_path=str(tmp_path),
     )
     import json
+
     env = json.loads(result.strip())
     assert "OPENAI_API_KEY" not in env
     assert "AWS_SECRET_ACCESS_KEY" not in env
@@ -22,8 +23,8 @@ def test_env_stripping(tmp_path):
 
 
 def test_scope_containment(tmp_path):
-    import os
     from argus.security.sandbox.isolator import SkillIsolator
+
     isolator = SkillIsolator()
     # Skill attempts to write outside its declared scope
     target_file = tmp_path / "escape_attempt.txt"

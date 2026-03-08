@@ -1,5 +1,4 @@
 """Tests for credential scanner patterns — CS-001 through CS-007."""
-import pytest
 
 
 def test_cs001_aws_access_key():

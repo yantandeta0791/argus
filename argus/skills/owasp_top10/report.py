@@ -1,4 +1,5 @@
 """OWASP report dataclasses — stub."""
+
 from dataclasses import dataclass
 
 

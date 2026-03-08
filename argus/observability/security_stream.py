@@ -7,6 +7,7 @@ of the trace format or trace file path.
 
 path=None silently discards all events — no exceptions raised.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

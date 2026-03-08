@@ -1,9 +1,7 @@
-import pytest
-
-
 def test_trace_event_dataclass_fields():
     """TraceEvent is a plain dataclass — constructable immediately, no stub boundary."""
     from argus.observability.trace import TraceEvent
+
     evt = TraceEvent(
         event_type="state_transition",
         timestamp="2026-03-07T00:00:00+00:00",
@@ -17,6 +15,7 @@ def test_trace_event_dataclass_fields():
 def test_trace_writer_writes_jsonl(tmp_path):
     from argus.observability.trace import TraceEvent, TraceWriter
     import json
+
     path = tmp_path / "trace.jsonl"
     writer = TraceWriter(path=path)
     evt = TraceEvent(
@@ -36,15 +35,18 @@ def test_trace_writer_writes_jsonl(tmp_path):
 
 def test_trace_writer_appends_multiple_events(tmp_path):
     from argus.observability.trace import TraceEvent, TraceWriter
+
     path = tmp_path / "trace.jsonl"
     writer = TraceWriter(path=path)
     for i in range(3):
-        writer.write(TraceEvent(
-            event_type="tool_call",
-            timestamp="2026-03-07T00:00:00+00:00",
-            run_id="run-1",
-            payload={"tool": f"tool_{i}", "success": True, "duration_ms": 5.0},
-        ))
+        writer.write(
+            TraceEvent(
+                event_type="tool_call",
+                timestamp="2026-03-07T00:00:00+00:00",
+                run_id="run-1",
+                payload={"tool": f"tool_{i}", "success": True, "duration_ms": 5.0},
+            )
+        )
     writer.flush()
     lines = path.read_text().strip().split("\n")
     assert len(lines) == 3
@@ -52,14 +54,17 @@ def test_trace_writer_appends_multiple_events(tmp_path):
 
 def test_trace_writer_creates_parent_dirs(tmp_path):
     from argus.observability.trace import TraceEvent, TraceWriter
+
     path = tmp_path / "runs" / "abc123" / "trace.jsonl"
     writer = TraceWriter(path=path)
-    writer.write(TraceEvent(
-        event_type="llm_call",
-        timestamp="2026-03-07T00:00:00+00:00",
-        run_id="run-1",
-        payload={"model": "claude-3-5-sonnet", "state": "PLAN"},
-    ))
+    writer.write(
+        TraceEvent(
+            event_type="llm_call",
+            timestamp="2026-03-07T00:00:00+00:00",
+            run_id="run-1",
+            payload={"model": "claude-3-5-sonnet", "state": "PLAN"},
+        )
+    )
     assert path.exists()
 
 
@@ -67,24 +72,32 @@ def test_run_complete_cost_breakdown(tmp_path):
     """OBS-03: cost_breakdown readable from trace without other files."""
     from argus.observability.trace import TraceEvent, TraceWriter
     import json
+
     path = tmp_path / "trace.jsonl"
     writer = TraceWriter(path=path)
     cost_breakdown = [
-        {"state": "PLAN", "model": "claude-3-5-sonnet", "input_tokens": 100,
-         "output_tokens": 50, "cost_usd": 0.001},
-    ]
-    writer.write(TraceEvent(
-        event_type="run_complete",
-        timestamp="2026-03-07T00:00:00+00:00",
-        run_id="run-1",
-        payload={
-            "final_state": "COMMIT",
-            "total_cost_usd": 0.001,
-            "cost_breakdown": cost_breakdown,
-            "duration_ms": 150.0,
-            "error": None,
+        {
+            "state": "PLAN",
+            "model": "claude-3-5-sonnet",
+            "input_tokens": 100,
+            "output_tokens": 50,
+            "cost_usd": 0.001,
         },
-    ))
+    ]
+    writer.write(
+        TraceEvent(
+            event_type="run_complete",
+            timestamp="2026-03-07T00:00:00+00:00",
+            run_id="run-1",
+            payload={
+                "final_state": "COMMIT",
+                "total_cost_usd": 0.001,
+                "cost_breakdown": cost_breakdown,
+                "duration_ms": 150.0,
+                "error": None,
+            },
+        )
+    )
     writer.flush()
     lines = path.read_text().strip().split("\n")
     data = json.loads(lines[0])

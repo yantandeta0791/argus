@@ -1,5 +1,4 @@
 """Tests for credential scanner core behavior."""
-import pytest
 
 
 def test_clean_context_no_findings():

@@ -48,5 +48,7 @@ class SkillIsolator:
         )
         if result.returncode != 0:
             # Surface stderr for debugging — do NOT expose to LLM context
-            raise RuntimeError(f"Skill exited {result.returncode}: {result.stderr[:500]}")
+            raise RuntimeError(
+                f"Skill exited {result.returncode}: {result.stderr[:500]}"
+            )
         return result.stdout

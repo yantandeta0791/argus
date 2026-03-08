@@ -12,6 +12,7 @@ Design:
   - get() returns a copy to prevent external mutation (list-copy pattern)
   - revoke() is idempotent -- does not raise on missing skill
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -36,7 +37,11 @@ class SkillRegistry:
         Args:
             manifest: SkillManifest instance (or any object with model_dump()).
         """
-        data = manifest.model_dump() if hasattr(manifest, "model_dump") else {"name": str(manifest)}
+        data = (
+            manifest.model_dump()
+            if hasattr(manifest, "model_dump")
+            else {"name": str(manifest)}
+        )
         data["installed_at"] = datetime.now(timezone.utc).isoformat()
         data["current_stage"] = "INSTALL"
         self._skills[data["name"]] = data

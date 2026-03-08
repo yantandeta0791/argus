@@ -1,4 +1,5 @@
 """Regex credential patterns — CS-001 through CS-007."""
+
 from __future__ import annotations
 
 import re

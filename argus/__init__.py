@@ -4,6 +4,7 @@ Argus — Deterministic Security Enforcement for AI Agents.
 Phase 1 exports: security foundation (all gates, exceptions, events).
 Phase 2 will add: state machine, tool contracts.
 """
+
 from argus.security.exceptions import (
     ArgusSecurityError,
     PermissionDeniedError,

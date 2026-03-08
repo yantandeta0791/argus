@@ -17,6 +17,7 @@ Hashing algorithm:
 Hash format: "sha256:<64-char-hex-digest>"
 Exclusions: __pycache__/, .git/, *.pyc, skill.yaml (manifest contains the hash)
 """
+
 from __future__ import annotations
 
 import hashlib

@@ -1,4 +1,5 @@
 """Rich terminal output helpers for Argus CLI."""
+
 from __future__ import annotations
 import os
 import sys
@@ -45,9 +46,13 @@ def print_violation_table(violations: list[dict]) -> None:
 
 def print_demo_header(injected: int, caught: int) -> None:
     """Render the demo benchmark summary panel."""
-    status = "[bold green]✓[/bold green]" if caught == injected else "[bold red]✗[/bold red]"
-    console.print(Panel(
-        f"  Argus Demo — Security Benchmark\n"
-        f"  {injected} violations injected • {caught} caught {status}",
-        box=box.ROUNDED,
-    ))
+    status = (
+        "[bold green]✓[/bold green]" if caught == injected else "[bold red]✗[/bold red]"
+    )
+    console.print(
+        Panel(
+            f"  Argus Demo — Security Benchmark\n"
+            f"  {injected} violations injected • {caught} caught {status}",
+            box=box.ROUNDED,
+        )
+    )

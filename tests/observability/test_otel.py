@@ -1,9 +1,9 @@
-import pytest
-
-
 def test_otel_emitter_llm_call_span():
     from argus.observability.otel import OtelEmitter
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
     exporter = InMemorySpanExporter()
     emitter = OtelEmitter(service_name="argus-test", exporter=exporter)
     emitter.emit_llm_call(
@@ -25,7 +25,10 @@ def test_otel_emitter_llm_call_span():
 
 def test_otel_emitter_state_transition_span():
     from argus.observability.otel import OtelEmitter
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
     exporter = InMemorySpanExporter()
     emitter = OtelEmitter(service_name="argus-test", exporter=exporter)
     emitter.emit_state_transition(from_state="PLAN", to_state="EXECUTE", run_id="run-1")
@@ -39,6 +42,7 @@ def test_otel_emitter_state_transition_span():
 
 def test_file_span_exporter_writes_jsonl(tmp_path):
     from argus.observability.otel import FileSpanExporter, OtelEmitter
+
     path = tmp_path / "spans.jsonl"
     exporter = FileSpanExporter(path=path)
     emitter = OtelEmitter(service_name="argus-test", exporter=exporter)
@@ -51,6 +55,7 @@ def test_file_span_exporter_writes_jsonl(tmp_path):
     )
     emitter.flush()
     import json
+
     lines = path.read_text().strip().split("\n")
     assert len(lines) == 1
     span_data = json.loads(lines[0])
@@ -61,6 +66,7 @@ def test_file_span_exporter_writes_jsonl(tmp_path):
 
 def test_file_span_exporter_creates_parent_dirs(tmp_path):
     from argus.observability.otel import FileSpanExporter
+
     path = tmp_path / "runs" / "abc" / "spans.jsonl"
     exporter = FileSpanExporter(path=path)
     exporter.shutdown()

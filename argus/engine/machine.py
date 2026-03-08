@@ -9,6 +9,7 @@ Phase 3 injects real LLM callable into handlers via llm_callable parameter.
 Phase 4 injects SessionStore via store parameter for cross-run persistence.
 Phase 2 state handlers are stubs; they receive llm_callable but do not call it.
 """
+
 from __future__ import annotations
 
 import copy
@@ -26,8 +27,11 @@ TRANSITION_SEQUENCE: list[TaskState] = [
     TaskState.COMMIT,
 ]
 
+
 # Default no-op handler -- used when caller does not inject a handler for a state
-async def _noop_handler(context: RunContext, llm: LLMCallable | None, *, store: Any = None) -> None:
+async def _noop_handler(
+    context: RunContext, llm: LLMCallable | None, *, store: Any = None
+) -> None:
     """No-op stub for states that have no injected handler."""
     pass
 
@@ -113,7 +117,9 @@ class StateMachine:
                 duration_ms = (time.monotonic() - state_start) * 1000
 
                 if self._obs:
-                    self._obs.on_state_transition(prior_state, state, context, duration_ms)
+                    self._obs.on_state_transition(
+                        prior_state, state, context, duration_ms
+                    )
 
             # All 5 states completed -- run is successful
             result = RunResult(

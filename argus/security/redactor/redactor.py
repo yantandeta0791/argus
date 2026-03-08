@@ -6,19 +6,22 @@ from argus.security.events import SecurityEvent, GateType
 # Ordered by specificity — more specific patterns first
 SECRET_PATTERNS = [
     # OpenAI API keys: sk-proj-... or sk-... (20+ alphanumeric chars)
-    (r'sk-(?:proj-)?[A-Za-z0-9\-_]{20,}', "openai_key"),
+    (r"sk-(?:proj-)?[A-Za-z0-9\-_]{20,}", "openai_key"),
     # GitHub tokens: ghp_, ghs_, gho_, ghu_, github_pat_
     # Real tokens are 36+ chars after prefix, but accept 32+ for test compatibility
-    (r'gh[pousp]_[A-Za-z0-9]{32,}', "github_token"),
-    (r'github_pat_[A-Za-z0-9_]{36,}', "github_pat"),
+    (r"gh[pousp]_[A-Za-z0-9]{32,}", "github_token"),
+    (r"github_pat_[A-Za-z0-9_]{36,}", "github_pat"),
     # AWS keys
-    (r'AKIA[0-9A-Z]{16}', "aws_access_key"),
+    (r"AKIA[0-9A-Z]{16}", "aws_access_key"),
     # Generic API_KEY=value or API-KEY: value patterns (key name + value)
-    (r'(?i)(?:api[_\-]?key|secret[_\-]?key|access[_\-]?token|auth[_\-]?token)\s*[=:]\s*\S{8,}', "generic_api_key"),
+    (
+        r"(?i)(?:api[_\-]?key|secret[_\-]?key|access[_\-]?token|auth[_\-]?token)\s*[=:]\s*\S{8,}",
+        "generic_api_key",
+    ),
     # Bearer tokens in Authorization headers
-    (r'(?i)Bearer\s+[A-Za-z0-9\-._~+/]{20,}', "bearer_token"),
+    (r"(?i)Bearer\s+[A-Za-z0-9\-._~+/]{20,}", "bearer_token"),
     # Email addresses (PII)
-    (r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', "email"),
+    (r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}", "email"),
 ]
 
 REPLACEMENT = "[REDACTED]"
@@ -46,11 +49,13 @@ class SecretRedactor:
             matches = compiled.findall(result)
             if matches and self._event_sink:
                 # Emit SecurityEvent for each unique match type (not per match — avoid log spam)
-                self._event_sink(SecurityEvent(
-                    gate=GateType.REDACTION,
-                    outcome="redacted",
-                    rule_triggered=label,
-                    blocked_value=str(matches[0])[:50],  # first match, truncated
-                ))
+                self._event_sink(
+                    SecurityEvent(
+                        gate=GateType.REDACTION,
+                        outcome="redacted",
+                        rule_triggered=label,
+                        blocked_value=str(matches[0])[:50],  # first match, truncated
+                    )
+                )
             result = compiled.sub(REPLACEMENT, result)
         return result

@@ -28,8 +28,8 @@ class PromptShield:
     def _normalize(self, text: str) -> str:
         """Collapse whitespace and strip zero-width Unicode obfuscation characters."""
         # Strip zero-width spaces first (before whitespace collapse)
-        text = re.sub(r'[\u200b\u200c\u200d\ufeff]', '', text)
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"[\u200b\u200c\u200d\ufeff]", "", text)
+        text = re.sub(r"\s+", " ", text)
         return text.strip()
 
     def scan(self, tool_output: str) -> None:

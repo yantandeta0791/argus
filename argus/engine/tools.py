@@ -15,6 +15,7 @@ Circuit breaker scope: module-level registry keyed by tool_name ensures failure
 counts persist across ToolRunner instances (avoids per-instance counter reset pitfall
 documented in 02-RESEARCH.md section Pitfall 1).
 """
+
 from __future__ import annotations
 
 import json
@@ -41,13 +42,16 @@ AMBIGUOUS_EXCEPTIONS = (TimeoutError, ConnectionError, OSError)
 _CIRCUIT_REGISTRY: dict[str, Callable] = {}
 
 
-def _make_circuit_wrapper(tool_name: str, failure_threshold: int, recovery_timeout: int) -> Callable:
+def _make_circuit_wrapper(
+    tool_name: str, failure_threshold: int, recovery_timeout: int
+) -> Callable:
     """Create and register a circuit-breaker-wrapped async caller for a tool name.
 
     Called once per unique (tool_name, failure_threshold, recovery_timeout) combination.
     The @circuit decorator is applied at definition time — failure counts persist
     across all ToolRunner instances that share the same tool_name.
     """
+
     @circuit(
         failure_threshold=failure_threshold,
         recovery_timeout=recovery_timeout,
@@ -75,6 +79,7 @@ class ToolManifest:
         failure_threshold:  Consecutive failures before circuit opens (TOOL-03).
         recovery_timeout:   Seconds before half-open probe attempt (TOOL-03).
     """
+
     name: str
     input_schema: Type[BaseModel]
     output_schema: Type[BaseModel]
@@ -101,7 +106,9 @@ class ToolRunner:
                    None = no-op. Never raises.
     """
 
-    def __init__(self, manifest: ToolManifest, tool_fn: Callable, gateway: Any, obs: Any = None) -> None:
+    def __init__(
+        self, manifest: ToolManifest, tool_fn: Callable, gateway: Any, obs: Any = None
+    ) -> None:
         self._manifest = manifest
         self._tool_fn = tool_fn
         self._gateway = gateway
@@ -171,7 +178,9 @@ class ToolRunner:
         _duration_ms = (_time.monotonic() - _t0) * 1000
 
         # Step 4: Security post-call gate on string representation (TOOL-01 output must be clean)
-        output_str = json.dumps(raw_output) if isinstance(raw_output, dict) else str(raw_output)
+        output_str = (
+            json.dumps(raw_output) if isinstance(raw_output, dict) else str(raw_output)
+        )
         clean_str = self._gateway.post_tool_call(output_str)
 
         # Reconstruct dict from cleaned string for output validation

@@ -1,9 +1,7 @@
-import pytest
-
-
 def test_obs_config_defaults():
     """ObsConfig is a plain dataclass — constructable immediately, no stub boundary."""
     from argus.observability.manager import ObsConfig
+
     config = ObsConfig()
     assert config.enabled is True
     assert config.trace_path is None
@@ -16,6 +14,7 @@ def test_manager_on_state_transition_writes_trace(tmp_path):
     from argus.observability.manager import ObservabilityManager, ObsConfig
     from argus.engine.states import RunContext, TaskState
     import json
+
     trace_path = tmp_path / "trace.jsonl"
     mgr = ObservabilityManager(ObsConfig(trace_path=trace_path))
     ctx = RunContext(task_id="t1", task_input={})
@@ -37,6 +36,7 @@ def test_manager_on_state_transition_writes_trace(tmp_path):
 def test_manager_disabled_is_noop(tmp_path):
     from argus.observability.manager import ObservabilityManager, ObsConfig
     from argus.engine.states import RunContext, TaskState
+
     trace_path = tmp_path / "trace.jsonl"
     mgr = ObservabilityManager(ObsConfig(trace_path=trace_path, enabled=False))
     ctx = RunContext(task_id="t1", task_input={})
@@ -48,6 +48,7 @@ def test_manager_disabled_is_noop(tmp_path):
 def test_manager_on_star_never_raises(tmp_path):
     """ObservabilityManager.on_* methods must never propagate exceptions."""
     from argus.observability.manager import ObservabilityManager, ObsConfig
+
     mgr = ObservabilityManager(ObsConfig(trace_path=tmp_path / "trace.jsonl"))
     # Simulate broken writer by passing invalid data — must not raise
     mgr.on_state_transition(None, None, None, float("nan"))
@@ -60,6 +61,7 @@ def test_manager_on_run_complete_embeds_cost(tmp_path):
     from argus.observability.manager import ObservabilityManager, ObsConfig
     from argus.engine.states import RunResult, TaskState
     import json
+
     trace_path = tmp_path / "trace.jsonl"
     mgr = ObservabilityManager(ObsConfig(trace_path=trace_path))
     result = RunResult(
@@ -69,8 +71,13 @@ def test_manager_on_run_complete_embeds_cost(tmp_path):
         error=None,
         success=True,
         cost_breakdown=[
-            {"state": "PLAN", "model": "claude-3-5-sonnet",
-             "input_tokens": 100, "output_tokens": 50, "cost_usd": 0.001},
+            {
+                "state": "PLAN",
+                "model": "claude-3-5-sonnet",
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "cost_usd": 0.001,
+            },
         ],
     )
     mgr.on_run_complete(result)

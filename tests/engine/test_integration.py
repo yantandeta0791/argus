@@ -5,7 +5,7 @@ These tests prove the two subsystems compose correctly:
   - ToolRunner.call() inside a state handler flows to RunResult.artifacts
   - ArgusSecurityError from gateway inside a tool call triggers StateMachine rollback
 """
-import pytest
+
 from unittest.mock import MagicMock
 from pydantic import BaseModel
 
@@ -23,6 +23,7 @@ class _Output(BaseModel):
 
 async def test_tool_runner_inside_state_handler(mock_gateway):
     """End-to-end: ToolRunner.call() inside EXECUTE handler; result appears in artifacts; COMMIT."""
+
     async def real_tool(inp: _Input):
         return {"result": f"processed:{inp.value}", "bytes_read": len(inp.value)}
 
@@ -39,7 +40,7 @@ async def test_tool_runner_inside_state_handler(mock_gateway):
         output = await runner.call(agent_role="executor", raw_input={"value": "hello"})
         context.artifacts["tool_result"] = output.result
 
-    async def noop(c, l, *, store=None):
+    async def noop(c, llm, *, store=None):
         pass
 
     handlers = {
@@ -80,13 +81,15 @@ async def test_security_violation_inside_tool_triggers_rollback():
     async def never_reaches_here(inp):
         return {"result": "should not run", "bytes_read": 0}
 
-    runner = ToolRunner(manifest=manifest, tool_fn=never_reaches_here, gateway=blocking_gateway)
+    runner = ToolRunner(
+        manifest=manifest, tool_fn=never_reaches_here, gateway=blocking_gateway
+    )
 
     async def execute_handler(context: RunContext, llm, *, store=None) -> None:
         context.artifacts["partial"] = "written before tool call"
         await runner.call(agent_role="executor", raw_input={"value": "secret"})
 
-    async def noop(c, l, *, store=None):
+    async def noop(c, llm, *, store=None):
         pass
 
     handlers = {
@@ -97,7 +100,9 @@ async def test_security_violation_inside_tool_triggers_rollback():
         TaskState.COMMIT: noop,
     }
 
-    sm = StateMachine(gateway=blocking_gateway, cost_hook=lambda: False, handlers=handlers)
+    sm = StateMachine(
+        gateway=blocking_gateway, cost_hook=lambda: False, handlers=handlers
+    )
     ctx = RunContext(task_id="integration-02", task_input={"goal": "write blocked"})
     result = await sm.run(ctx)
 

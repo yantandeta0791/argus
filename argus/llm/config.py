@@ -8,6 +8,7 @@ load_config() -- reads argus.yaml using yaml.safe_load (PyYAML, already in deps)
 Design: fresh ModelConfig per call -- no singleton caching. Simple and testable.
 API keys never stored here -- must come from environment variables (ANTHROPIC_API_KEY).
 """
+
 from __future__ import annotations
 
 import yaml
@@ -18,6 +19,7 @@ from pathlib import Path
 @dataclass
 class SpendConfig:
     """Hard spend caps. None means no cap for that dimension."""
+
     per_task_usd: float | None = None
     per_session_usd: float | None = None
     per_day_usd: float | None = None
@@ -34,6 +36,7 @@ class ModelConfig:
 
     None as a state value means no LLM call for that state (e.g., COMMIT).
     """
+
     default: str = "anthropic/claude-sonnet-4-6"
     states: dict[str, str | None] = field(default_factory=dict)
     tasks: dict[str, str] = field(default_factory=dict)

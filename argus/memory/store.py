@@ -9,6 +9,7 @@ The '__GLOBAL__' sentinel is an internal implementation detail used for
 global facts (visible across all sessions). Callers use global_=True
 parameter instead.
 """
+
 from __future__ import annotations
 
 import json

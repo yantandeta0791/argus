@@ -1,5 +1,4 @@
 """Integration tests for OWASP Top 10 skill."""
-import pytest
 
 
 def test_clean_config_all_pass():

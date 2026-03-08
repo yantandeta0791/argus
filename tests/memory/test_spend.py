@@ -26,10 +26,15 @@ async def test_over_budget_daily_combined():
 
     config = SpendConfig(per_day_usd=0.50)
     tracker = SpendTracker(config, daily_spend_usd=0.40)
-    tracker.record(StateCostEntry(
-        state="PLAN", model="test", input_tokens=100,
-        output_tokens=50, cost_usd=0.11,
-    ))
+    tracker.record(
+        StateCostEntry(
+            state="PLAN",
+            model="test",
+            input_tokens=100,
+            output_tokens=50,
+            cost_usd=0.11,
+        )
+    )
     assert tracker.over_budget() is True  # 0.40 + 0.11 >= 0.50
 
 

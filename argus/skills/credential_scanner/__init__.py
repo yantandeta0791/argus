@@ -1,4 +1,5 @@
 """Credential Scanner skill — detects exposed API keys, tokens, and secrets."""
+
 from __future__ import annotations
 
 import json

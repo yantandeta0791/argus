@@ -5,6 +5,7 @@ These tests do NOT require langchain to be installed. The adapter uses duck
 typing (Any) and only needs the tool to have .name and .invoke(). We use
 unittest.mock.MagicMock to simulate both LangChain tools and the SecurityGateway.
 """
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -103,7 +104,9 @@ class TestArgusToolWrapper:
         wrapper.invoke("hello world")
 
         # Gateway receives dict form
-        gw.pre_tool_call.assert_called_once_with("default", "search", {"input": "hello world"})
+        gw.pre_tool_call.assert_called_once_with(
+            "default", "search", {"input": "hello world"}
+        )
 
         # Underlying tool receives original string
         tool.invoke.assert_called_once_with("hello world")

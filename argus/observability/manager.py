@@ -13,10 +13,11 @@ All on_* methods:
 
 run_id is a uuid4 generated once at construction time, shared across all sinks.
 """
+
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,7 @@ class ObsConfig:
     All paths default to None — sinks are disabled unless a path is provided.
     enabled=False disables all sinks without removing the manager from call sites.
     """
+
     trace_path: "Path | None" = None
     security_stream_path: "Path | None" = None
     otel_spans_path: "Path | None" = None
@@ -57,7 +59,9 @@ class ObservabilityManager:
             # No-op mode — no sinks opened, no files created
             self._trace_writer = None
             self._sec_writer = SecurityEventWriter(None)
-            self._otel = OtelEmitter(service_name=config.service_name, exporter=InMemorySpanExporter())
+            self._otel = OtelEmitter(
+                service_name=config.service_name, exporter=InMemorySpanExporter()
+            )
             return
 
         # Construct sinks based on config paths
@@ -89,17 +93,19 @@ class ObservabilityManager:
                 return
             task_id = getattr(context, "task_id", None)
             if self._trace_writer is not None:
-                self._trace_writer.write(TraceEvent(
-                    event_type="state_transition",
-                    timestamp=self._now(),
-                    run_id=self._run_id,
-                    payload={
-                        "from": str(from_state),
-                        "to": str(to_state),
-                        "duration_ms": duration_ms,
-                        "task_id": task_id,
-                    },
-                ))
+                self._trace_writer.write(
+                    TraceEvent(
+                        event_type="state_transition",
+                        timestamp=self._now(),
+                        run_id=self._run_id,
+                        payload={
+                            "from": str(from_state),
+                            "to": str(to_state),
+                            "duration_ms": duration_ms,
+                            "task_id": task_id,
+                        },
+                    )
+                )
             self._otel.emit_state_transition(from_state, to_state, self._run_id)
         except Exception:
             pass  # observability failure never crashes the agent
@@ -118,17 +124,19 @@ class ObservabilityManager:
                 return
             tool_name = getattr(manifest, "name", str(manifest))
             if self._trace_writer is not None:
-                self._trace_writer.write(TraceEvent(
-                    event_type="tool_call",
-                    timestamp=self._now(),
-                    run_id=self._run_id,
-                    payload={
-                        "tool": tool_name,
-                        "success": error is None,
-                        "duration_ms": duration_ms,
-                        "error": str(error) if error is not None else None,
-                    },
-                ))
+                self._trace_writer.write(
+                    TraceEvent(
+                        event_type="tool_call",
+                        timestamp=self._now(),
+                        run_id=self._run_id,
+                        payload={
+                            "tool": tool_name,
+                            "success": error is None,
+                            "duration_ms": duration_ms,
+                            "error": str(error) if error is not None else None,
+                        },
+                    )
+                )
         except Exception:
             pass
 
@@ -147,19 +155,21 @@ class ObservabilityManager:
             input_tokens = usage.get("input", 0)
             output_tokens = usage.get("output", 0)
             if self._trace_writer is not None:
-                self._trace_writer.write(TraceEvent(
-                    event_type="llm_call",
-                    timestamp=self._now(),
-                    run_id=self._run_id,
-                    payload={
-                        "model": model,
-                        "state": state,
-                        "input_tokens": input_tokens,
-                        "output_tokens": output_tokens,
-                        "cost_usd": cost_usd,
-                        "duration_ms": duration_ms,
-                    },
-                ))
+                self._trace_writer.write(
+                    TraceEvent(
+                        event_type="llm_call",
+                        timestamp=self._now(),
+                        run_id=self._run_id,
+                        payload={
+                            "model": model,
+                            "state": state,
+                            "input_tokens": input_tokens,
+                            "output_tokens": output_tokens,
+                            "cost_usd": cost_usd,
+                            "duration_ms": duration_ms,
+                        },
+                    )
+                )
             self._otel.emit_llm_call(
                 model=model,
                 state=state,
@@ -196,20 +206,25 @@ class ObservabilityManager:
                 else:
                     # StateCostEntry dataclass — convert to dict
                     import dataclasses as dc
-                    normalized.append(dc.asdict(entry) if dc.is_dataclass(entry) else vars(entry))
+
+                    normalized.append(
+                        dc.asdict(entry) if dc.is_dataclass(entry) else vars(entry)
+                    )
             total_cost = sum(e.get("cost_usd", 0.0) for e in normalized)
-            self._trace_writer.write(TraceEvent(
-                event_type="run_complete",
-                timestamp=self._now(),
-                run_id=self._run_id,
-                payload={
-                    "final_state": str(getattr(result, "final_state", "unknown")),
-                    "total_cost_usd": total_cost,
-                    "cost_breakdown": normalized,
-                    "duration_ms": 0.0,  # caller may override if needed
-                    "error": getattr(result, "error", None),
-                },
-            ))
+            self._trace_writer.write(
+                TraceEvent(
+                    event_type="run_complete",
+                    timestamp=self._now(),
+                    run_id=self._run_id,
+                    payload={
+                        "final_state": str(getattr(result, "final_state", "unknown")),
+                        "total_cost_usd": total_cost,
+                        "cost_breakdown": normalized,
+                        "duration_ms": 0.0,  # caller may override if needed
+                        "error": getattr(result, "error", None),
+                    },
+                )
+            )
         except Exception:
             pass
 

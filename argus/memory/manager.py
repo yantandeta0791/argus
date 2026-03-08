@@ -11,6 +11,7 @@ Design:
 - MemoryConfig resolves db_path with XDG_DATA_HOME support.
 - Phase 4 provides the persistence layer for MEM-02 and MEM-03.
 """
+
 from __future__ import annotations
 
 import os
@@ -30,6 +31,7 @@ class MemoryConfig:
     db_path: explicit database file path. None = auto-resolve to
     ~/.argus/state.db (XDG_DATA_HOME respected if set).
     """
+
     db_path: Path | None = None
 
     def resolved_path(self) -> Path:
@@ -95,5 +97,7 @@ class MemoryManager:
 
         Raises AssertionError if not connected (connect() not called).
         """
-        assert self._conn is not None, "MemoryManager not connected -- call connect() first"
+        assert self._conn is not None, (
+            "MemoryManager not connected -- call connect() first"
+        )
         return SessionStore(conn=self._conn, session_id=session_id)

@@ -1,4 +1,5 @@
 """argus scan — static security analysis."""
+
 from __future__ import annotations
 import dataclasses
 import json
@@ -17,8 +18,12 @@ class OutputFormat(str, Enum):
 
 @app.command()
 def scan_command(
-    target: Path = typer.Argument(..., help="Path to skill directory or agent config YAML"),
-    fmt: OutputFormat = typer.Option(OutputFormat.text, "--format", help="Output format"),
+    target: Path = typer.Argument(
+        ..., help="Path to skill directory or agent config YAML"
+    ),
+    fmt: OutputFormat = typer.Option(
+        OutputFormat.text, "--format", help="Output format"
+    ),
 ) -> None:
     """Static security scan of a skill manifest or agent config."""
     if not target.exists():
@@ -40,7 +45,9 @@ def scan_command(
             lifecycle = SkillLifecycleManager()
             lifecycle.verify_skill(target)
         except SkillIntegrityError:
-            typer.echo("Error: Skill integrity check failed — content hash mismatch", err=True)
+            typer.echo(
+                "Error: Skill integrity check failed — content hash mismatch", err=True
+            )
             raise typer.Exit(code=1)
         except Exception:
             pass  # malformed manifest — let audit_run report it as SA-001

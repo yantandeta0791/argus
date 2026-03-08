@@ -1,6 +1,7 @@
 def test_violation_logged():
     from argus.security.egress.checker import EgressChecker
-    from argus.security.events import SecurityEvent, GateType
+    from argus.security.events import GateType
+
     events = []
     checker = EgressChecker(
         allowlist=["api.example.com"],
@@ -15,6 +16,7 @@ def test_violation_logged():
 def test_log_only_no_network_block():
     from argus.security.egress.checker import EgressChecker
     from argus.security.exceptions import EgressViolationError
+
     events = []
     checker = EgressChecker(
         allowlist=["api.example.com"],

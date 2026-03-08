@@ -1,10 +1,8 @@
-import pytest
-
-
 def test_security_event_writer_writes_jsonl(tmp_path):
     from argus.observability.security_stream import SecurityEventWriter
     from argus.security.events import SecurityEvent, GateType
     import json
+
     path = tmp_path / "security.jsonl"
     writer = SecurityEventWriter(path=path)
     event = SecurityEvent(
@@ -27,6 +25,7 @@ def test_security_event_writer_none_path_is_noop():
     """OBS-04: path=None silently discards events — no error raised."""
     from argus.observability.security_stream import SecurityEventWriter
     from argus.security.events import SecurityEvent, GateType
+
     writer = SecurityEventWriter(path=None)
     event = SecurityEvent(gate=GateType.EGRESS, outcome="violation")
     writer.write(event)  # must not raise
@@ -38,6 +37,7 @@ def test_security_stream_independent_of_trace(tmp_path):
     from argus.observability.security_stream import SecurityEventWriter
     from argus.security.events import SecurityEvent, GateType
     import json
+
     # Only security path provided — no trace path
     sec_path = tmp_path / "security.jsonl"
     writer = SecurityEventWriter(path=sec_path)
@@ -51,6 +51,7 @@ def test_security_stream_independent_of_trace(tmp_path):
 def test_security_event_writer_creates_parent_dirs(tmp_path):
     from argus.observability.security_stream import SecurityEventWriter
     from argus.security.events import SecurityEvent, GateType
+
     path = tmp_path / "runs" / "abc123" / "security.jsonl"
     writer = SecurityEventWriter(path=path)
     writer.write(SecurityEvent(gate=GateType.EGRESS, outcome="violation"))

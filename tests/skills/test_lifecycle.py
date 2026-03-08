@@ -3,6 +3,7 @@
 Tests that SkillLifecycleManager drives skills through all stages,
 emits SecurityEvents, delegates to SkillIsolator, and handles failures.
 """
+
 import pytest
 import yaml
 
@@ -10,9 +11,11 @@ import yaml
 def test_full_lifecycle(tmp_skill_dir, mock_isolator):
     """SKILL-02: runs through all 7 stages for a valid skill."""
     from argus.skills.lifecycle import SkillLifecycleManager
+
     events = []
     manager = SkillLifecycleManager(
-        isolator=mock_isolator, event_sink=events.append,
+        isolator=mock_isolator,
+        event_sink=events.append,
     )
     result = manager.run_lifecycle(tmp_skill_dir)
     assert result["success"] is True
@@ -24,9 +27,11 @@ def test_stage_events(tmp_skill_dir, mock_isolator):
     """SKILL-02: each transition emits SecurityEvent with GateType.SKILL_LIFECYCLE."""
     from argus.skills.lifecycle import SkillLifecycleManager
     from argus.security.events import GateType
+
     events = []
     manager = SkillLifecycleManager(
-        isolator=mock_isolator, event_sink=events.append,
+        isolator=mock_isolator,
+        event_sink=events.append,
     )
     manager.run_lifecycle(tmp_skill_dir)
     assert len(events) >= 14  # 7 stages x 2 events (entered + completed)
@@ -52,7 +57,8 @@ def test_failure_triggers_revoke(tmp_skill_dir, mock_isolator):
 
     events = []
     manager = SkillLifecycleManager(
-        isolator=mock_isolator, event_sink=events.append,
+        isolator=mock_isolator,
+        event_sink=events.append,
     )
     with pytest.raises(SkillIntegrityError):
         manager.run_lifecycle(tmp_skill_dir)
@@ -66,11 +72,13 @@ def test_failure_triggers_revoke(tmp_skill_dir, mock_isolator):
 def test_verify_stage_checks_hash(tmp_skill_dir, mock_isolator):
     """SKILL-02: VERIFY stage calls hash verification and passes for valid skill."""
     from argus.skills.lifecycle import SkillLifecycleManager
+
     events = []
     manager = SkillLifecycleManager(
-        isolator=mock_isolator, event_sink=events.append,
+        isolator=mock_isolator,
+        event_sink=events.append,
     )
-    result = manager.run_lifecycle(tmp_skill_dir)
+    manager.run_lifecycle(tmp_skill_dir)
     verify_events = [e for e in events if e.metadata.get("stage") == "verify"]
     assert any(e.outcome == "completed" for e in verify_events)
 
@@ -78,6 +86,7 @@ def test_verify_stage_checks_hash(tmp_skill_dir, mock_isolator):
 def test_execute_stage_uses_isolator(tmp_skill_dir, mock_isolator):
     """SKILL-02: EXECUTE stage delegates to SkillIsolator."""
     from argus.skills.lifecycle import SkillLifecycleManager
+
     manager = SkillLifecycleManager(isolator=mock_isolator)
     manager.run_lifecycle(tmp_skill_dir)
     mock_isolator.run.assert_called_once()
@@ -125,7 +134,9 @@ def test_verify_skill_builtin_skill():
     from pathlib import Path
     from argus.skills.lifecycle import SkillLifecycleManager
 
-    skill_dir = Path(__file__).parent.parent.parent / "argus" / "skills" / "security_audit"
+    skill_dir = (
+        Path(__file__).parent.parent.parent / "argus" / "skills" / "security_audit"
+    )
     lifecycle = SkillLifecycleManager()
     manifest = lifecycle.verify_skill(skill_dir)
 

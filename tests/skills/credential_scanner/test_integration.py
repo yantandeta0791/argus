@@ -1,5 +1,4 @@
 """Integration tests for Credential Scanner skill."""
-import pytest
 
 
 def test_run_string_context():

@@ -10,6 +10,7 @@ CRITICAL: gen_ai.* constants are NOT available in opentelemetry-semantic-convent
 CRITICAL: Uses a LOCAL TracerProvider per ObservabilityManager instance.
 Do NOT call trace.set_tracer_provider() — that pollutes global state.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

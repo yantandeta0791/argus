@@ -15,10 +15,16 @@ async def test_artifacts_fresh_per_run():
     async def write_handler(context, llm, *, store=None):
         context.artifacts["marker"] = context.task_id
 
-    handlers_map = {s: write_handler for s in [
-        TaskState.PLAN, TaskState.EXECUTE, TaskState.VERIFY,
-        TaskState.REFLECT, TaskState.COMMIT,
-    ]}
+    handlers_map = {
+        s: write_handler
+        for s in [
+            TaskState.PLAN,
+            TaskState.EXECUTE,
+            TaskState.VERIFY,
+            TaskState.REFLECT,
+            TaskState.COMMIT,
+        ]
+    }
 
     gw = MagicMock()
     sm = StateMachine(gateway=gw, cost_hook=lambda: False, handlers=handlers_map)

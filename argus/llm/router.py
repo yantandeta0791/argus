@@ -9,6 +9,7 @@ Short-circuits to {} when state model is None (e.g., COMMIT -- no LLM call).
 Input redaction: RunContext.task_input is serialized to str and passed through
 SecretRedactor if one is injected. Redaction happens BEFORE acompletion() (SEC-03).
 """
+
 from __future__ import annotations
 
 import json
@@ -68,11 +69,19 @@ class LLMRouter:
         """
         model = self._resolve_model(context)
         if model is None:
-            logger.debug("State %s has no model configured -- skipping LLM call", context.current_state)
+            logger.debug(
+                "State %s has no model configured -- skipping LLM call",
+                context.current_state,
+            )
             return {}
 
         messages = self._build_messages(context)
-        logger.debug("LLMRouter calling %s for state %s / task %s", model, context.current_state, context.task_id)
+        logger.debug(
+            "LLMRouter calling %s for state %s / task %s",
+            model,
+            context.current_state,
+            context.task_id,
+        )
 
         response = await litellm.acompletion(
             model=model,
@@ -136,8 +145,13 @@ class LLMRouter:
         user_parts = [f"Task input: {json.dumps(context.task_input, default=str)}"]
 
         # Include artifacts for states that benefit from prior work context
-        if context.current_state in (TaskState.VERIFY, TaskState.REFLECT) and context.artifacts:
-            user_parts.append(f"Prior artifacts: {json.dumps(context.artifacts, default=str)}")
+        if (
+            context.current_state in (TaskState.VERIFY, TaskState.REFLECT)
+            and context.artifacts
+        ):
+            user_parts.append(
+                f"Prior artifacts: {json.dumps(context.artifacts, default=str)}"
+            )
 
         user_content = "\n\n".join(user_parts)
 

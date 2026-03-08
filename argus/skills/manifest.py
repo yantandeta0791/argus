@@ -16,6 +16,7 @@ Validation rules:
   - builtin tier is only valid for skills inside argus/skills/ source tree
   - All required fields must be present; Pydantic rejects partial manifests
 """
+
 from __future__ import annotations
 
 import re
@@ -33,6 +34,7 @@ ARGUS_SKILLS_DIR = Path(__file__).parent
 
 class TrustTier(StrEnum):
     """Trust classification for skills. Determines permission ceiling and sandbox strictness."""
+
     BUILTIN = "builtin"
     VERIFIED = "verified"
     COMMUNITY = "community"
@@ -41,6 +43,7 @@ class TrustTier(StrEnum):
 
 class BlastRadius(StrEnum):
     """Maximum impact scope declared by a skill."""
+
     NONE = "none"
     LOCAL = "local"
     NETWORK = "network"

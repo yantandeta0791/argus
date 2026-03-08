@@ -1,5 +1,4 @@
 """Tests for Security Audit checker — SA-001 through SA-007."""
-import pytest
 
 
 def test_sa001_missing_required_fields(tmp_path):

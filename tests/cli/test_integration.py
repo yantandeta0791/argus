@@ -1,6 +1,6 @@
 """Integration tests for argus CLI (full e2e flows)."""
+
 import time
-import pytest
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -9,6 +9,7 @@ runner = CliRunner()
 def test_demo_timing():
     """Full demo run completes in under 10 seconds (no live LLM — all mocked)."""
     from argus.cli.main import app
+
     start = time.monotonic()
     result = runner.invoke(app, ["demo"])
     elapsed = time.monotonic() - start

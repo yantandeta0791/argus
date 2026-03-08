@@ -11,6 +11,7 @@ Public API:
     MemoryConfig   -- database path configuration
     SessionStore   -- per-session read/write interface for facts
 """
+
 from argus.memory.manager import MemoryManager, MemoryConfig
 from argus.memory.store import SessionStore
 

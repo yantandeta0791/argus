@@ -1,5 +1,4 @@
 """Integration tests for Security Audit skill."""
-import pytest
 
 
 def test_clean_manifest_passes(tmp_path):

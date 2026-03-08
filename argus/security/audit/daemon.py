@@ -6,6 +6,7 @@ waits until the Unix socket is connectable, and provides clean shutdown.
 
 Uses subprocess.Popen (NOT multiprocessing.Process) because fork breaks asyncio.
 """
+
 from __future__ import annotations
 
 import os

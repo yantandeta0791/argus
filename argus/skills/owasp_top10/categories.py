@@ -1,4 +1,5 @@
 """ASI01-ASI10 check implementations for OWASP Agentic Top 10."""
+
 from __future__ import annotations
 
 from argus.skills.owasp_top10.report import CategoryResult

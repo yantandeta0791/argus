@@ -9,6 +9,7 @@ Gate execution order (fixed, non-negotiable):
     PRE:  1. Permission check  2. Audit pre-call event
     POST: 3. Injection scan    4. Secret/PII redaction  5. Egress check  6. Audit post-call event
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -30,6 +31,7 @@ class GatewayConfig:
     Flat config for SecurityGateway. Constructed from argus.yaml at startup.
     All fields have safe defaults — permissive with no policy.
     """
+
     permissions: Optional[PolicyConfig] = None
     prompt_shield_patterns: list[str] = field(default_factory=list)
     egress_allowlist: list[str] = field(default_factory=list)
@@ -41,9 +43,13 @@ class SecurityGateway:
     Agents run INSIDE Argus — no LLM output, no agent config can bypass these gates.
     """
 
-    def __init__(self, config: GatewayConfig, audit_logger: AuditLogger, obs: Any = None):
+    def __init__(
+        self, config: GatewayConfig, audit_logger: AuditLogger, obs: Any = None
+    ):
         self._permission = PermissionEnforcer(config.permissions)
-        self._shield = PromptShield(extra_patterns=config.prompt_shield_patterns or None)
+        self._shield = PromptShield(
+            extra_patterns=config.prompt_shield_patterns or None
+        )
         self._redactor = SecretRedactor()
         self._audit = audit_logger
         self._obs = obs
@@ -88,13 +94,15 @@ class SecurityGateway:
             raise
 
         # Gate 2: Audit pre-call (hard stop — fail-closed)
-        self._audit.send({
-            "event_type": "tool_call_pre",
-            "agent_role": agent_role,
-            "tool_name": tool_name,
-            # tool_input deliberately omitted from audit — may contain sensitive params
-            # Phase 7 adds structured input logging with redaction applied first
-        })
+        self._audit.send(
+            {
+                "event_type": "tool_call_pre",
+                "agent_role": agent_role,
+                "tool_name": tool_name,
+                # tool_input deliberately omitted from audit — may contain sensitive params
+                # Phase 7 adds structured input logging with redaction applied first
+            }
+        )
 
         return tool_input
 
@@ -137,13 +145,15 @@ class SecurityGateway:
                 self._egress.check(hostname=hostname, skill_name=skill_name)
 
         # Gate 6: Audit post-call (hard stop — fail-closed)
-        self._audit.send({
-            "event_type": "tool_call_post",
-            "output_length": len(clean_output),
-            # Full clean_output deliberately omitted from audit payload —
-            # AuditLogger caller (log_process) receives a summary, not raw data.
-            # Phase 7 adds structured output logging.
-        })
+        self._audit.send(
+            {
+                "event_type": "tool_call_post",
+                "output_length": len(clean_output),
+                # Full clean_output deliberately omitted from audit payload —
+                # AuditLogger caller (log_process) receives a summary, not raw data.
+                # Phase 7 adds structured output logging.
+            }
+        )
 
         return clean_output
 

@@ -1,5 +1,4 @@
 """Tests for OWASP Agentic Top 10 — ASI01 through ASI10."""
-import pytest
 
 
 def test_asi01_prompt_injection():

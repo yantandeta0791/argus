@@ -8,6 +8,7 @@ pending migrations on connect.
 Design: '__GLOBAL__' sentinel used for global facts (not NULL) to avoid
 SQLite NULL uniqueness pitfall in composite primary keys.
 """
+
 from __future__ import annotations
 
 import aiosqlite

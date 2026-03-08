@@ -1,4 +1,5 @@
 """argus run — full Argus runtime execution."""
+
 from __future__ import annotations
 import asyncio
 import os
@@ -12,14 +13,20 @@ app = typer.Typer()
 
 @app.command()
 def run_command(
-    config: Path = typer.Option(Path("argus.yaml"), "--config", help="Path to argus.yaml"),
+    config: Path = typer.Option(
+        Path("argus.yaml"), "--config", help="Path to argus.yaml"
+    ),
     task: str = typer.Option("", "--task", help="Task string to run"),
-    trace_dir: Path = typer.Option(Path("./runs"), "--trace-dir", help="Directory for trace output"),
+    trace_dir: Path = typer.Option(
+        Path("./runs"), "--trace-dir", help="Directory for trace output"
+    ),
 ) -> None:
     """Execute an agent through the full Argus runtime."""
     # Fail fast: no API key
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        typer.echo("Error: ANTHROPIC_API_KEY environment variable is not set.", err=True)
+        typer.echo(
+            "Error: ANTHROPIC_API_KEY environment variable is not set.", err=True
+        )
         raise typer.Exit(code=2)
 
     # Fail fast: no config file
@@ -47,16 +54,20 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
     trace_dir.mkdir(parents=True, exist_ok=True)
 
     # Observability — write trace and security stream to trace_dir
-    obs = ObservabilityManager(ObsConfig(
-        trace_path=trace_dir / "trace.jsonl",
-        security_stream_path=trace_dir / "security.jsonl",
-        enabled=True,
-    ))
+    obs = ObservabilityManager(
+        ObsConfig(
+            trace_path=trace_dir / "trace.jsonl",
+            security_stream_path=trace_dir / "security.jsonl",
+            enabled=True,
+        )
+    )
 
     # Load config and build LLM stack
     model_config = load_config(config)
     tracker = SpendTracker(model_config.spend)
-    router = LLMRouter(config=model_config, tracker=tracker, obs=obs, redactor=SecretRedactor())
+    router = LLMRouter(
+        config=model_config, tracker=tracker, obs=obs, redactor=SecretRedactor()
+    )
 
     # Security gateway — real audit daemon and logger
     socket_path = str(trace_dir / "audit.sock")
@@ -65,7 +76,9 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
     daemon.start()
     try:
         audit_logger = AuditLogger(socket_path)
-        gateway = SecurityGateway(config=GatewayConfig(), audit_logger=audit_logger, obs=obs)
+        gateway = SecurityGateway(
+            config=GatewayConfig(), audit_logger=audit_logger, obs=obs
+        )
 
         # Memory — scoped DB to this run's trace_dir
         memory = MemoryManager(MemoryConfig(db_path=trace_dir / "memory.db"))
@@ -84,12 +97,16 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
                 task_input={"goal": task if task else "demo task"},
             )
             result = await sm.run(ctx)
-            result.cost_breakdown = tracker.entries()  # populate per-state cost data (OBS-03)
+            result.cost_breakdown = (
+                tracker.entries()
+            )  # populate per-state cost data (OBS-03)
             obs.on_run_complete(result)
             obs.flush()
 
             if result.success:
-                typer.echo(f"Run complete. Trace written to {trace_dir / 'trace.jsonl'}")
+                typer.echo(
+                    f"Run complete. Trace written to {trace_dir / 'trace.jsonl'}"
+                )
                 raise typer.Exit(code=0)
             else:
                 typer.echo(

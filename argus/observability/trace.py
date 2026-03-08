@@ -5,12 +5,12 @@ Provides the structured execution trace (OBS-01) and cost reporting (OBS-03).
 Each TraceEvent is written as a single compact JSON line to a .jsonl file.
 The run_complete event embeds cost_breakdown — cost readable from trace alone.
 """
+
 from __future__ import annotations
 
 import dataclasses
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -28,10 +28,11 @@ class TraceEvent:
                                        duration_ms, error}
                             cost_breakdown is list[dict] satisfying OBS-03
     """
-    event_type: str   # "state_transition" | "tool_call" | "llm_call" | "run_complete"
-    timestamp: str    # ISO-8601 UTC — datetime.now(timezone.utc).isoformat()
-    run_id: str       # uuid4 — set once per ObservabilityManager instance
-    payload: dict     # event-specific fields (see event_type docs above)
+
+    event_type: str  # "state_transition" | "tool_call" | "llm_call" | "run_complete"
+    timestamp: str  # ISO-8601 UTC — datetime.now(timezone.utc).isoformat()
+    run_id: str  # uuid4 — set once per ObservabilityManager instance
+    payload: dict  # event-specific fields (see event_type docs above)
 
 
 class TraceWriter:

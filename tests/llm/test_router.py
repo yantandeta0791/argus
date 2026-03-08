@@ -1,6 +1,6 @@
 """Tests for LLMRouter -- LLM-01, LLM-02, LLM-03, COST-01, COST-02."""
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+
+from unittest.mock import AsyncMock, patch
 from argus.engine.states import RunContext, TaskState
 
 
@@ -8,6 +8,7 @@ async def test_router_calls_litellm_acompletion(mock_litellm_response, sample_co
     """LLM-01: LLMRouter calls litellm.acompletion, not direct Anthropic SDK."""
     from argus.llm.router import LLMRouter
     from argus.llm.tracker import SpendTracker
+
     tracker = SpendTracker(sample_config.spend)
     router = LLMRouter(config=sample_config, tracker=tracker)
     ctx = RunContext(task_id="t1", task_input={"goal": "test"})
@@ -24,6 +25,7 @@ async def test_default_model_resolves_to_sonnet(mock_litellm_response, sample_co
     from argus.llm.router import LLMRouter
     from argus.llm.tracker import SpendTracker
     from argus.llm.config import ModelConfig, SpendConfig
+
     config = ModelConfig(default="anthropic/claude-sonnet-4-6")
     tracker = SpendTracker(SpendConfig())
     router = LLMRouter(config=config, tracker=tracker)
@@ -41,6 +43,7 @@ async def test_provider_swap_via_config(mock_litellm_response):
     from argus.llm.router import LLMRouter
     from argus.llm.tracker import SpendTracker
     from argus.llm.config import ModelConfig, SpendConfig
+
     config = ModelConfig(default="openai/gpt-4o")
     tracker = SpendTracker(SpendConfig())
     router = LLMRouter(config=config, tracker=tracker)
@@ -57,6 +60,7 @@ async def test_per_state_model_selection(mock_litellm_response, sample_config):
     """COST-01: PLAN uses Opus, EXECUTE uses Sonnet, COMMIT makes no LLM call."""
     from argus.llm.router import LLMRouter
     from argus.llm.tracker import SpendTracker
+
     tracker = SpendTracker(sample_config.spend)
     router = LLMRouter(config=sample_config, tracker=tracker)
 
@@ -80,6 +84,7 @@ async def test_per_task_override_supersedes_state(mock_litellm_response, sample_
     """COST-02: Per-task override has highest priority over per-state config."""
     from argus.llm.router import LLMRouter
     from argus.llm.tracker import SpendTracker
+
     tracker = SpendTracker(sample_config.spend)
     router = LLMRouter(config=sample_config, tracker=tracker)
     ctx = RunContext(task_id="summarize", task_input={})

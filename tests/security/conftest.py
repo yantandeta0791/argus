@@ -1,6 +1,5 @@
 import pytest
 import os
-import tempfile
 
 
 @pytest.fixture
@@ -23,6 +22,7 @@ def mock_policy_config():
 def fernet_key():
     """A valid Fernet key for testing secret redaction."""
     from cryptography.fernet import Fernet
+
     return Fernet.generate_key()
 
 

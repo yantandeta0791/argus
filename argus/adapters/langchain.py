@@ -14,6 +14,7 @@ Usage:
     safe_tools = wrap_tools(tools, gateway=gateway, agent_role="my_agent")
     agent = create_react_agent(llm, safe_tools)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -76,6 +77,5 @@ def wrap_tools(
         List of ArgusToolWrapper instances (drop-in replacements).
     """
     return [
-        ArgusToolWrapper(tool=t, gateway=gateway, agent_role=agent_role)
-        for t in tools
+        ArgusToolWrapper(tool=t, gateway=gateway, agent_role=agent_role) for t in tools
     ]

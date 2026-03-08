@@ -1,4 +1,5 @@
 """Finding dataclasses for Security Audit skill — stub."""
+
 from __future__ import annotations
 from enum import StrEnum
 from dataclasses import dataclass

@@ -11,6 +11,7 @@ Public API (7 symbols):
     OtelEmitter            — OpenTelemetry span emitter (OBS-02)
     FileSpanExporter       — SpanExporter that writes compact JSON lines to .jsonl
 """
+
 from argus.observability.manager import ObsConfig, ObservabilityManager
 from argus.observability.trace import TraceEvent, TraceWriter
 from argus.observability.security_stream import SecurityEventWriter

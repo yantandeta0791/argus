@@ -14,6 +14,7 @@ No LLM output drives a lifecycle transition (consistent with STM-02).
 Cleanup guarantee: if any stage fails, REVOKE runs to clean up registry state.
 No partial installs are left behind.
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 class SkillStage(StrEnum):
     """Lifecycle stages for skill execution."""
+
     INSTALL = "install"
     VERIFY = "verify"
     SANDBOX = "sandbox"
@@ -159,15 +161,21 @@ class SkillLifecycleManager:
         self._registry.install(manifest)
 
         self._emit(
-            SkillStage.INSTALL, manifest.name, "completed",
+            SkillStage.INSTALL,
+            manifest.name,
+            "completed",
             trust_tier=str(manifest.trust_tier),
         )
         return manifest
 
     def _do_verify(self, skill_dir: Path, manifest: SkillManifest) -> None:
         """VERIFY: Check SHA-256 content hash against manifest."""
-        self._emit(SkillStage.VERIFY, manifest.name, "entered",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.VERIFY,
+            manifest.name,
+            "entered",
+            trust_tier=str(manifest.trust_tier),
+        )
 
         if not verify_content_hash(skill_dir, manifest.content_hash):
             exc = SkillIntegrityError(
@@ -176,12 +184,20 @@ class SkillLifecycleManager:
                 rule=f"hash mismatch: expected={manifest.content_hash}",
             )
             exc._failed_stage = SkillStage.VERIFY  # type: ignore[attr-defined]
-            self._emit(SkillStage.VERIFY, manifest.name, "blocked",
-                       trust_tier=str(manifest.trust_tier))
+            self._emit(
+                SkillStage.VERIFY,
+                manifest.name,
+                "blocked",
+                trust_tier=str(manifest.trust_tier),
+            )
             raise exc
 
-        self._emit(SkillStage.VERIFY, manifest.name, "completed",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.VERIFY,
+            manifest.name,
+            "completed",
+            trust_tier=str(manifest.trust_tier),
+        )
 
     def _do_sandbox(self, manifest: SkillManifest) -> None:
         """SANDBOX: Configure isolation based on trust tier.
@@ -189,21 +205,35 @@ class SkillLifecycleManager:
         v1: Log sandbox configuration. Actual isolation is provided by
         SkillIsolator's subprocess env stripping. v1.1 adds Docker.
         """
-        self._emit(SkillStage.SANDBOX, manifest.name, "entered",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.SANDBOX,
+            manifest.name,
+            "entered",
+            trust_tier=str(manifest.trust_tier),
+        )
 
         logger.debug(
             "Sandbox configured for %s (tier=%s, blast_radius=%s)",
-            manifest.name, manifest.trust_tier, manifest.blast_radius,
+            manifest.name,
+            manifest.trust_tier,
+            manifest.blast_radius,
         )
 
-        self._emit(SkillStage.SANDBOX, manifest.name, "completed",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.SANDBOX,
+            manifest.name,
+            "completed",
+            trust_tier=str(manifest.trust_tier),
+        )
 
     def _do_execute(self, skill_dir: Path, manifest: SkillManifest) -> dict:
         """EXECUTE: Run skill via SkillIsolator."""
-        self._emit(SkillStage.EXECUTE, manifest.name, "entered",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.EXECUTE,
+            manifest.name,
+            "entered",
+            trust_tier=str(manifest.trust_tier),
+        )
 
         stdout = self._isolator.run(
             skill_cmd=["-m", manifest.name],
@@ -213,14 +243,22 @@ class SkillLifecycleManager:
 
         exec_result = {"stdout": stdout, "exit_code": 0}
 
-        self._emit(SkillStage.EXECUTE, manifest.name, "completed",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.EXECUTE,
+            manifest.name,
+            "completed",
+            trust_tier=str(manifest.trust_tier),
+        )
         return exec_result
 
     def _do_monitor(self, manifest: SkillManifest, exec_result: dict) -> dict:
         """MONITOR: Passive metadata collection."""
-        self._emit(SkillStage.MONITOR, manifest.name, "entered",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.MONITOR,
+            manifest.name,
+            "entered",
+            trust_tier=str(manifest.trust_tier),
+        )
 
         monitor_data = {
             "skill_name": manifest.name,
@@ -229,14 +267,22 @@ class SkillLifecycleManager:
             "execution_result": exec_result,
         }
 
-        self._emit(SkillStage.MONITOR, manifest.name, "completed",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.MONITOR,
+            manifest.name,
+            "completed",
+            trust_tier=str(manifest.trust_tier),
+        )
         return monitor_data
 
     def _do_report(self, manifest: SkillManifest, monitor_data: dict) -> dict:
         """REPORT: Produce structured execution result."""
-        self._emit(SkillStage.REPORT, manifest.name, "entered",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.REPORT,
+            manifest.name,
+            "entered",
+            trust_tier=str(manifest.trust_tier),
+        )
 
         report = {
             "skill_name": manifest.name,
@@ -246,8 +292,12 @@ class SkillLifecycleManager:
             "metrics": monitor_data,
         }
 
-        self._emit(SkillStage.REPORT, manifest.name, "completed",
-                   trust_tier=str(manifest.trust_tier))
+        self._emit(
+            SkillStage.REPORT,
+            manifest.name,
+            "completed",
+            trust_tier=str(manifest.trust_tier),
+        )
         return report
 
     def _do_revoke(

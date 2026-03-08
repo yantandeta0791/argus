@@ -1,4 +1,5 @@
 """Security Audit skill — scans skill manifests for misconfigurations."""
+
 from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,10 +18,7 @@ def run(target: Path) -> AuditReport:
         AuditReport with all findings and a passed bool (True iff no ERROR/CRITICAL).
     """
     findings = check_manifest(target)
-    passed = all(
-        f.severity not in ("ERROR", "CRITICAL")
-        for f in findings
-    )
+    passed = all(f.severity not in ("ERROR", "CRITICAL") for f in findings)
     return AuditReport(
         target=str(target),
         findings=findings,

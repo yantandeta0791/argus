@@ -4,6 +4,7 @@
 async def test_session_fact_put_and_get(tmp_db_path):
     """MEM-02: put a fact, get it back, assert equal."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     store = mgr.session("s1")
@@ -16,6 +17,7 @@ async def test_session_fact_put_and_get(tmp_db_path):
 async def test_session_fact_persists_across_reads(tmp_db_path):
     """MEM-02: put then get twice, both return same value."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     store = mgr.session("s1")
@@ -29,6 +31,7 @@ async def test_session_fact_persists_across_reads(tmp_db_path):
 async def test_session_isolation(tmp_db_path):
     """MEM-02: put in session A, get in session B returns None."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     store_a = mgr.session("session-A")
@@ -42,6 +45,7 @@ async def test_session_isolation(tmp_db_path):
 async def test_global_fact_cross_session(tmp_db_path):
     """MEM-03: put global in session A, get global in session B returns value."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     store_a = mgr.session("session-A")
@@ -55,6 +59,7 @@ async def test_global_fact_cross_session(tmp_db_path):
 async def test_facts_returns_copy(tmp_db_path):
     """MEM-03: facts() returns dict, mutating it does not affect store."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     store = mgr.session("s1")
@@ -69,6 +74,7 @@ async def test_facts_returns_copy(tmp_db_path):
 async def test_get_missing_key_returns_none(tmp_db_path):
     """MEM-02/03: get nonexistent key returns None, not KeyError."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     store = mgr.session("s1")
@@ -80,6 +86,7 @@ async def test_get_missing_key_returns_none(tmp_db_path):
 async def test_put_overwrites_existing(tmp_db_path):
     """MEM-03: put same key twice, get returns latest value."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     store = mgr.session("s1")
@@ -93,6 +100,7 @@ async def test_put_overwrites_existing(tmp_db_path):
 async def test_delete_removes_fact(tmp_db_path):
     """MEM-03: put then delete then get returns None."""
     from argus.memory.manager import MemoryManager, MemoryConfig
+
     mgr = MemoryManager(MemoryConfig(db_path=tmp_db_path))
     await mgr.connect()
     store = mgr.session("s1")

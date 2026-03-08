@@ -12,6 +12,7 @@ Design:
 - over_budget() is synchronous -- matches StateMachine.cost_hook signature
   exactly: Callable[[], bool]
 """
+
 from __future__ import annotations
 
 import logging
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class StateCostEntry:
     """Cost record for one LLM call in one state."""
+
     state: str
     model: str
     input_tokens: int

@@ -1,6 +1,7 @@
 """Shared fixtures for argus.engine tests."""
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 
 @pytest.fixture
@@ -15,8 +16,10 @@ def mock_gateway():
 @pytest.fixture
 def stub_llm_callable():
     """Stub LLM callable: returns a fixed dict. Phase 3 replaces with real router."""
+
     async def _stub(context):
         return {"response": "stub-llm-output"}
+
     return _stub
 
 
@@ -35,8 +38,10 @@ def stub_cost_hook_over():
 @pytest.fixture
 def fake_tool_fn():
     """Async tool function that succeeds and returns a dict."""
+
     async def _tool(validated_input):
         return {"result": "ok", "bytes_read": 3}
+
     return _tool
 
 
@@ -44,9 +49,11 @@ def fake_tool_fn():
 def flaky_tool_fn():
     """Async tool function that raises RuntimeError on first N calls, then succeeds."""
     call_count = {"n": 0}
+
     async def _tool(validated_input):
         call_count["n"] += 1
         if call_count["n"] < 3:
             raise RuntimeError("transient failure")
         return {"result": "ok", "bytes_read": 3}
+
     return _tool
