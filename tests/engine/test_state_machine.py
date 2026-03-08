@@ -1,8 +1,6 @@
 """State machine tests -- STM-01, STM-02, STM-03, STM-04."""
-import pytest
 
 
-@pytest.mark.xfail(reason="StateMachine not yet implemented", strict=False)
 async def test_full_five_state_run(mock_gateway, stub_llm_callable, stub_cost_hook_ok):
     """STM-01: task runs through all 5 states in order; final_state is COMMIT."""
     from argus.engine.states import TaskState, RunContext
@@ -14,7 +12,6 @@ async def test_full_five_state_run(mock_gateway, stub_llm_callable, stub_cost_ho
     assert result.final_state == TaskState.COMMIT
 
 
-@pytest.mark.xfail(reason="StateMachine not yet implemented", strict=False)
 async def test_transition_is_deterministic(mock_gateway, stub_cost_hook_ok):
     """STM-02: state sequence is always PLAN->EXECUTE->VERIFY->REFLECT->COMMIT regardless of handler output."""
     from argus.engine.states import TaskState, RunContext
@@ -33,7 +30,6 @@ async def test_transition_is_deterministic(mock_gateway, stub_cost_hook_ok):
     ]
 
 
-@pytest.mark.xfail(reason="StateMachine not yet implemented", strict=False)
 async def test_failure_triggers_rollback(mock_gateway, stub_cost_hook_ok):
     """STM-03: exception in a state handler triggers rollback; run ends in structured error result."""
     from argus.engine.states import TaskState, RunContext
@@ -60,7 +56,6 @@ async def test_failure_triggers_rollback(mock_gateway, stub_cost_hook_ok):
     assert result.artifacts == {}
 
 
-@pytest.mark.xfail(reason="StateMachine not yet implemented", strict=False)
 async def test_cost_abort_fires_deterministically(mock_gateway, stub_cost_hook_over):
     """STM-04: cost hook returning True triggers ABORT before any state handler runs."""
     from argus.engine.states import TaskState, RunContext

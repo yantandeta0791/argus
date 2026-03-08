@@ -11,7 +11,6 @@ class _ReadOutput(BaseModel):
     bytes_read: int
 
 
-@pytest.mark.xfail(reason="ToolRunner not yet implemented", strict=False)
 async def test_input_validation_rejects(mock_gateway):
     """TOOL-01: invalid input (missing required field) raises ValidationError before tool executes."""
     from pydantic import ValidationError
@@ -27,7 +26,6 @@ async def test_input_validation_rejects(mock_gateway):
     assert executed["called"] is False
 
 
-@pytest.mark.xfail(reason="ToolRunner not yet implemented", strict=False)
 async def test_output_validation_rejects(mock_gateway):
     """TOOL-01: invalid output (missing required field) raises ValidationError before entering context."""
     from pydantic import ValidationError
@@ -40,7 +38,6 @@ async def test_output_validation_rejects(mock_gateway):
         await runner.call(agent_role="reader", raw_input={"path": "/tmp/x"})
 
 
-@pytest.mark.xfail(reason="ToolRunner not yet implemented", strict=False)
 async def test_retry_exponential_backoff(mock_gateway):
     """TOOL-02: flaky tool retries up to max_attempts with exponential backoff; succeeds on final attempt."""
     from argus.engine.tools import ToolManifest, ToolRunner
@@ -60,7 +57,6 @@ async def test_retry_exponential_backoff(mock_gateway):
     assert call_count["n"] == 3
 
 
-@pytest.mark.xfail(reason="ToolRunner not yet implemented", strict=False)
 async def test_circuit_breaker_opens(mock_gateway):
     """TOOL-03: after failure_threshold consecutive failures, subsequent calls fail fast with CircuitBreakerError."""
     from circuitbreaker import CircuitBreakerError
@@ -81,7 +77,6 @@ async def test_circuit_breaker_opens(mock_gateway):
         await runner.call(agent_role="writer", raw_input={"path": "/tmp/x"})
 
 
-@pytest.mark.xfail(reason="ToolRunner not yet implemented", strict=False)
 async def test_non_idempotent_no_retry_on_ambiguous(mock_gateway):
     """TOOL-04: non-idempotent tool does not retry on ambiguous failure (TimeoutError, ConnectionError)."""
     from argus.engine.tools import ToolManifest, ToolRunner
