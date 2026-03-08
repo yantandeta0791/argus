@@ -76,6 +76,27 @@ class SkillLifecycleManager:
         self._registry = registry or SkillRegistry()
         self._event_sink = event_sink
 
+    def verify_skill(self, skill_dir: Path) -> SkillManifest:
+        """Run INSTALL + VERIFY stages only. Returns validated manifest.
+
+        Use for static analysis where full lifecycle (subprocess execution) is not needed.
+        The skill's content hash is verified against its manifest before any analysis runs.
+
+        Args:
+            skill_dir: Path to the skill package directory containing skill.yaml.
+
+        Returns:
+            Validated SkillManifest with integrity verified.
+
+        Raises:
+            SkillIntegrityError: If content hash does not match manifest.
+            FileNotFoundError: If skill.yaml is missing.
+            pydantic.ValidationError: If manifest is invalid.
+        """
+        manifest = self._do_install(skill_dir)
+        self._do_verify(skill_dir, manifest)
+        return manifest
+
     def run_lifecycle(self, skill_dir: Path) -> dict:
         """Run a skill through the complete 7-stage lifecycle.
 
