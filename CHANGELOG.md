@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-08
+
 ### Added
 - Real AuditDaemon subprocess lifecycle manager (replaces MagicMock in `argus run` and `argus demo`)
 - LangChain adapter with proxy-based security enforcement (`argus.adapters.langchain`)
@@ -38,5 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Observability: JSONL execution trace, OpenTelemetry spans, cost reporting, security event stream
 - CLI: `argus demo` (scripted benchmark), `argus run` (full runtime), `argus scan` (static analysis)
 
-[Unreleased]: https://github.com/yantandeta0791/argus/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/yantandeta0791/argus/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/yantandeta0791/argus/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/yantandeta0791/argus/releases/tag/v0.1.0

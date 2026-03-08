@@ -23,13 +23,13 @@ The core architectural guarantee is that the deterministic security layer is inv
 ### Install
 
 ```bash
-pip install argus
+pip install git+https://github.com/yantandeta0791/argus
 ```
 
 Or from source:
 
 ```bash
-git clone https://github.com/your-org/argus
+git clone https://github.com/yantandeta0791/argus
 cd argus
 pip install -e .
 ```
