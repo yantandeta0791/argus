@@ -44,17 +44,16 @@ argus demo
 
 The demo runs a synthetic four-violation security benchmark with no API key required. It exercises the real `SecurityGateway`, `PromptShield`, and `CredentialScanner` against scripted attack inputs. All four violations should be caught and reported in a Rich table:
 
-```
-Argus Security Benchmark — 4 violations injected
+**Argus Security Benchmark — 4 violations injected**
 
- Type                Severity   Details
- Permission Denied   CRITICAL   Tool 'delete_file' blocked by DENY policy
- Prompt Injection    HIGH       Injection pattern detected in tool output
- Credential Exposed  CRITICAL   AWS Access Key detected (AKIA****)
- OWASP ASI07         WARNING    No cost cap configured
+| Type | Severity | Details |
+|------|----------|---------|
+| Permission Denied | `CRITICAL` | Tool `delete_file` blocked by DENY policy |
+| Prompt Injection | `HIGH` | Injection pattern detected in tool output |
+| Credential Exposed | `CRITICAL` | AWS Access Key detected (`AKIA****`) |
+| OWASP ASI07 | `WARNING` | No cost cap configured |
 
-All violations caught. Argus enforcement is working.
-```
+*All violations caught. Argus enforcement is working.*
 
 Exit code 0 if all four violations are caught, 1 otherwise.
 
