@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
-from unittest.mock import MagicMock
+from argus.security.audit.daemon import AuditDaemon
 
 import typer
 
@@ -58,39 +58,46 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
     tracker = SpendTracker(model_config.spend)
     router = LLMRouter(config=model_config, tracker=tracker, obs=obs, redactor=SecretRedactor())
 
-    # Security gateway — AuditLogger mocked (no daemon in v1 CLI)
-    mock_audit = MagicMock(spec=AuditLogger)
-    gateway = SecurityGateway(config=GatewayConfig(), audit_logger=mock_audit, obs=obs)
-
-    # Memory — scoped DB to this run's trace_dir
-    memory = MemoryManager(MemoryConfig(db_path=trace_dir / "memory.db"))
-    await memory.connect()
-
+    # Security gateway — real audit daemon and logger
+    socket_path = str(trace_dir / "audit.sock")
+    log_path = str(trace_dir / "audit.jsonl")
+    daemon = AuditDaemon(socket_path=socket_path, log_path=log_path)
+    daemon.start()
     try:
-        sm = StateMachine(
-            gateway=gateway,
-            cost_hook=tracker.over_budget,
-            llm_callable=router,
-            store=memory.session("run-session"),
-            obs=obs,
-        )
-        ctx = RunContext(
-            task_id="cli-run",
-            task_input={"goal": task if task else "demo task"},
-        )
-        result = await sm.run(ctx)
-        result.cost_breakdown = tracker.entries()  # populate per-state cost data (OBS-03)
-        obs.on_run_complete(result)
-        obs.flush()
+        audit_logger = AuditLogger(socket_path)
+        gateway = SecurityGateway(config=GatewayConfig(), audit_logger=audit_logger, obs=obs)
 
-        if result.success:
-            typer.echo(f"Run complete. Trace written to {trace_dir / 'trace.jsonl'}")
-            raise typer.Exit(code=0)
-        else:
-            typer.echo(
-                f"Run failed: {result.error or 'security violation or cost abort'}",
-                err=True,
+        # Memory — scoped DB to this run's trace_dir
+        memory = MemoryManager(MemoryConfig(db_path=trace_dir / "memory.db"))
+        await memory.connect()
+
+        try:
+            sm = StateMachine(
+                gateway=gateway,
+                cost_hook=tracker.over_budget,
+                llm_callable=router,
+                store=memory.session("run-session"),
+                obs=obs,
             )
-            raise typer.Exit(code=1)
+            ctx = RunContext(
+                task_id="cli-run",
+                task_input={"goal": task if task else "demo task"},
+            )
+            result = await sm.run(ctx)
+            result.cost_breakdown = tracker.entries()  # populate per-state cost data (OBS-03)
+            obs.on_run_complete(result)
+            obs.flush()
+
+            if result.success:
+                typer.echo(f"Run complete. Trace written to {trace_dir / 'trace.jsonl'}")
+                raise typer.Exit(code=0)
+            else:
+                typer.echo(
+                    f"Run failed: {result.error or 'security violation or cost abort'}",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+        finally:
+            await memory.close()
     finally:
-        await memory.close()
+        daemon.stop()
