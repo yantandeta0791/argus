@@ -1,6 +1,5 @@
 import socket
 import json
-import os
 import time
 from argus.security.exceptions import AuditUnavailableError
 
@@ -29,10 +28,19 @@ class AuditLogger:
 
     @staticmethod
     def wait_for_socket(path: str, timeout_s: float = 2.0) -> None:
-        """Poll until the socket file exists. Raises AuditUnavailableError on timeout."""
+        """Poll with socket.connect() until the socket is accepting connections.
+
+        Uses a real connection probe rather than os.path.exists() to prevent
+        a CI race where the file exists but the server is not yet listening.
+        Raises AuditUnavailableError on timeout.
+        """
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
-            if os.path.exists(path):
+            try:
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                sock.connect(path)
+                sock.close()
                 return
-            time.sleep(0.05)
-        raise AuditUnavailableError(f"Logger socket never appeared at {path}")
+            except (ConnectionRefusedError, FileNotFoundError, OSError):
+                time.sleep(0.05)
+        raise AuditUnavailableError(f"Logger socket never ready at {path}")
