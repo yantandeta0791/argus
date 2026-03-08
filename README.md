@@ -100,22 +100,22 @@ The run produces a JSONL execution trace at `./runs/trace.jsonl` and a security 
 Argus is built in four layers, each depending only on the layers below it.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CLI / Demo Surface                           │
-│            argus demo  │  argus run  │  argus scan             │
-├─────────────────────────────────────────────────────────────────┤
-│                    Observability Layer                          │
-│     TraceWriter (JSONL)  │  OtelEmitter  │  SecurityStream     │
-├─────────────────────────────────────────────────────────────────┤
-│               Intelligence Layer                                │
-│    LLMRouter (LiteLLM)  │  SpendTracker  │  MemoryManager      │
-├─────────────────────────────────────────────────────────────────┤
-│                 Execution Engine                                │
-│       StateMachine (5-state)  │  ToolRunner (contracts)        │
-├─────────────────────────────────────────────────────────────────┤
-│         Security Foundation (Deterministic — Inviolable)        │
-│  PermissionEnforcer │ PromptShield │ SecretRedactor │ EgressChecker │ AuditLogger │ SkillIsolator │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  CLI / Demo Surface                                      │
+│                       argus demo  │  argus run  │  argus scan                            │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                                  Observability Layer                                     │
+│                   TraceWriter (JSONL)  │  OtelEmitter  │  SecurityStream                 │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                                 Intelligence Layer                                       │
+│                  LLMRouter (LiteLLM)  │  SpendTracker  │  MemoryManager                  │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                                  Execution Engine                                        │
+│                      StateMachine (5-state)  │  ToolRunner (contracts)                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                       Security Foundation (Deterministic — Inviolable)                    │
+│  PermissionEnforcer │ PromptShield │ SecretRedactor │ EgressChecker │ AuditLogger │ ... │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Security Foundation** is built first and never modified for correctness. It is deterministic: no code path through any security gate touches an LLM. The permission enforcer is a Casbin RBAC/ABAC engine. The prompt shield is a compiled regex battery. The secret redactor is a regex + entropy scanner. The egress checker compares hostnames against a declared allowlist. The audit logger writes to a Unix socket owned by a separate process.
@@ -368,7 +368,6 @@ Wire the full stack programmatically:
 ```python
 import asyncio
 from pathlib import Path
-from unittest.mock import MagicMock
 
 from argus.llm.config import load_config
 from argus.llm.tracker import SpendTracker
@@ -376,6 +375,7 @@ from argus.llm.router import LLMRouter
 from argus.engine.machine import StateMachine
 from argus.engine.states import RunContext
 from argus.security.gateway import SecurityGateway, GatewayConfig
+from argus.security.audit.daemon import AuditDaemon
 from argus.security.audit.logger import AuditLogger
 from argus.security.redactor.redactor import SecretRedactor
 from argus.memory.manager import MemoryManager, MemoryConfig
@@ -383,47 +383,46 @@ from argus.observability.manager import ObservabilityManager, ObsConfig
 
 
 async def run_task(task: str) -> None:
-    # Observability
     obs = ObservabilityManager(ObsConfig(
         trace_path=Path("./runs/trace.jsonl"),
         security_stream_path=Path("./runs/security.jsonl"),
         enabled=True,
     ))
 
-    # LLM stack
     model_config = load_config("argus.yaml")
     tracker = SpendTracker(model_config.spend)
     router = LLMRouter(config=model_config, tracker=tracker, obs=obs, redactor=SecretRedactor())
 
-    # Security gateway
-    gateway = SecurityGateway(
-        config=GatewayConfig(permissions={
-            "rules": [{"role": "agent", "tool": "read_file", "effect": "allow"}]
-        }),
-        audit_logger=MagicMock(spec=AuditLogger),  # replace with real AuditLogger in production
-        obs=obs,
-    )
-
-    # Memory
-    memory = MemoryManager(MemoryConfig(db_path=Path("./runs/memory.db")))
-    await memory.connect()
-
-    try:
-        sm = StateMachine(
-            gateway=gateway,
-            cost_hook=tracker.over_budget,
-            llm_callable=router,
-            store=memory.session("my-session"),
+    # Spawn audit daemon and create real logger
+    with AuditDaemon(socket_path="/tmp/audit.sock", log_path="./runs/audit.jsonl") as daemon:
+        audit_logger = AuditLogger("/tmp/audit.sock")
+        gateway = SecurityGateway(
+            config=GatewayConfig(permissions={
+                "rules": [{"role": "agent", "tool": "read_file", "effect": "allow"}]
+            }),
+            audit_logger=audit_logger,
             obs=obs,
         )
-        ctx = RunContext(task_id="my-task", task_input={"goal": task})
-        result = await sm.run(ctx)
-        result.cost_breakdown = tracker.entries()
-        obs.on_run_complete(result)
-        obs.flush()
-        print(f"Success: {result.success}, state: {result.final_state}")
-    finally:
-        await memory.close()
+
+        memory = MemoryManager(MemoryConfig(db_path=Path("./runs/memory.db")))
+        await memory.connect()
+
+        try:
+            sm = StateMachine(
+                gateway=gateway,
+                cost_hook=tracker.over_budget,
+                llm_callable=router,
+                store=memory.session("my-session"),
+                obs=obs,
+            )
+            ctx = RunContext(task_id="my-task", task_input={"goal": task})
+            result = await sm.run(ctx)
+            result.cost_breakdown = tracker.entries()
+            obs.on_run_complete(result)
+            obs.flush()
+            print(f"Success: {result.success}, state: {result.final_state}")
+        finally:
+            await memory.close()
 
 
 asyncio.run(run_task("analyze the current directory"))
@@ -511,37 +510,30 @@ pytest -m "not integration"
 pytest tests/security/
 ```
 
-The test suite has 160 passing tests across 59 test files, covering all 36 v1 requirements.
+The test suite has 206 passing tests covering all v1.0 and v1.1 requirements.
 
 ## Roadmap
 
-### v1.0 (current)
+### v1.0 (shipped)
 
-36 requirements across 8 implementation phases:
+36 requirements across 8 phases. Security foundation, execution engine, LLM cost router, memory, skill architecture, Tier 1 skills, observability, CLI.
 
-- **Security Foundation**: Permission enforcement (SEC-01), hash-chained audit log (SEC-02), secret redaction (SEC-03), process isolation (SEC-04), prompt injection detection (SEC-05), egress control (SEC-06)
-- **Execution Engine**: 5-state machine (STM-01..04), tool contracts with Pydantic validation + retry + circuit breaker (TOOL-01..04)
-- **Cost Router**: Per-state model selection (COST-01), per-task overrides (COST-02), hard spend caps (COST-03), real-time cost tracking (COST-04), LiteLLM integration (LLM-01..03)
-- **Memory**: Working memory (MEM-01), session persistence (MEM-02), structured SQLite store (MEM-03)
-- **Skill Architecture**: YAML manifests (SKILL-01), 7-stage lifecycle (SKILL-02), SHA-256 content verification (SKILL-03)
-- **Tier 1 Skills**: Security Audit (T1SK-01), OWASP Agentic Top 10 (T1SK-02), Credential Scanner (T1SK-03)
-- **Observability**: JSONL execution trace (OBS-01), OpenTelemetry spans (OBS-02), cost reporting (OBS-03), security event stream (OBS-04)
-- **CLI**: `argus demo` (CLI-01), `argus run` (CLI-02), `argus scan` (CLI-03)
+### v1.1 (current)
 
-### v1.1 (planned)
+- Real AuditDaemon subprocess manager (SEC-02 complete)
+- LangChain adapter with proxy-based security enforcement
+- SkillLifecycleManager verification wired into `argus scan`
+- GitHub Actions CI, Docker deployment, community infrastructure
+- 30 stale xfail markers removed, 206 tests passing
 
-- Auto-start AuditLogger Unix socket daemon in `argus run` and `argus demo` (SEC-02 full implementation)
-- Route Tier 1 builtins through `SkillLifecycleManager` (SKILL-02/03 full implementation)
-- Docker container isolation for skill execution (SBX-02)
-- gVisor (`runsc`) container runtime for full kernel isolation (SBX-01)
+### v2 (planned)
 
-### v2
-
-- Redis hot memory layer + Qdrant semantic memory (MEM-V2-01..06)
-- OCI skill registry via `oras-py` (SKILL-V2-01)
-- `argus serve` REST API mode (CLI-V2-01)
-- Local model support via LiteLLM / Ollama (LLM-V2-01)
-- Human-in-the-loop approval gates for high-risk tool calls (REL-V2-01)
+- Redis hot memory layer + Qdrant semantic memory
+- OCI skill registry via `oras-py`
+- `argus serve` REST API mode
+- Local model support via LiteLLM / Ollama
+- Human-in-the-loop approval gates for high-risk tool calls
+- CrewAI / AutoGen adapters
 
 ## License
 
