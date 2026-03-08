@@ -1,7 +1,6 @@
 import pytest
 
 
-@pytest.mark.xfail(reason="SEC-05 not yet implemented", strict=False)
 def test_injection_blocked(sample_injection_output):
     from argus.security.prompt_shield.shield import PromptShield
     from argus.security.exceptions import InjectionDetectedError
@@ -10,14 +9,12 @@ def test_injection_blocked(sample_injection_output):
         shield.scan(sample_injection_output)
 
 
-@pytest.mark.xfail(reason="SEC-05 not yet implemented", strict=False)
 def test_clean_output_passes(sample_clean_output):
     from argus.security.prompt_shield.shield import PromptShield
     shield = PromptShield()
     shield.scan(sample_clean_output)  # must not raise
 
 
-@pytest.mark.xfail(reason="SEC-05 not yet implemented", strict=False)
 def test_unicode_normalization():
     from argus.security.prompt_shield.shield import PromptShield
     from argus.security.exceptions import InjectionDetectedError

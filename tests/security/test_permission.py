@@ -1,7 +1,6 @@
 import pytest
 
 
-@pytest.mark.xfail(reason="SEC-01 not yet implemented", strict=False)
 def test_deny_by_policy(mock_policy_config):
     from argus.security.permission.enforcer import PermissionEnforcer
     from argus.security.exceptions import PermissionDeniedError
@@ -10,14 +9,12 @@ def test_deny_by_policy(mock_policy_config):
         enforcer.enforce(role="reader", tool_name="write_file")
 
 
-@pytest.mark.xfail(reason="SEC-01 not yet implemented", strict=False)
 def test_permissive_default():
     from argus.security.permission.enforcer import PermissionEnforcer
     enforcer = PermissionEnforcer(None)
     enforcer.enforce(role="any_role", tool_name="any_tool")  # must not raise
 
 
-@pytest.mark.xfail(reason="SEC-01 not yet implemented", strict=False)
 def test_role_immutable(mock_policy_config):
     from argus.security.permission.enforcer import PermissionEnforcer
     enforcer = PermissionEnforcer(mock_policy_config)

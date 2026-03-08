@@ -1,7 +1,3 @@
-import pytest
-
-
-@pytest.mark.xfail(reason="SEC-04 not yet implemented", strict=False)
 def test_env_stripping(tmp_path):
     import os
     from argus.security.sandbox.isolator import SkillIsolator
@@ -25,7 +21,6 @@ def test_env_stripping(tmp_path):
     assert set(env.keys()).issubset(allowed | macos_system_vars)
 
 
-@pytest.mark.xfail(reason="SEC-04 not yet implemented", strict=False)
 def test_scope_containment(tmp_path):
     import os
     from argus.security.sandbox.isolator import SkillIsolator

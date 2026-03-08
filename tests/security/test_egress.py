@@ -1,7 +1,3 @@
-import pytest
-
-
-@pytest.mark.xfail(reason="SEC-06 not yet implemented", strict=False)
 def test_violation_logged():
     from argus.security.egress.checker import EgressChecker
     from argus.security.events import SecurityEvent, GateType
@@ -16,7 +12,6 @@ def test_violation_logged():
     assert events[0].outcome == "violation"
 
 
-@pytest.mark.xfail(reason="SEC-06 not yet implemented", strict=False)
 def test_log_only_no_network_block():
     from argus.security.egress.checker import EgressChecker
     from argus.security.exceptions import EgressViolationError

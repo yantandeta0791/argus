@@ -1,7 +1,3 @@
-import pytest
-
-
-@pytest.mark.xfail(reason="SEC-03 not yet implemented", strict=False)
 def test_api_key_redaction():
     from argus.security.redactor.redactor import SecretRedactor
     redactor = SecretRedactor()
@@ -11,7 +7,6 @@ def test_api_key_redaction():
     assert "[REDACTED]" in result
 
 
-@pytest.mark.xfail(reason="SEC-03 not yet implemented", strict=False)
 def test_pii_email_redaction():
     from argus.security.redactor.redactor import SecretRedactor
     redactor = SecretRedactor()
@@ -21,7 +16,6 @@ def test_pii_email_redaction():
     assert "[REDACTED]" in result
 
 
-@pytest.mark.xfail(reason="SEC-03 not yet implemented", strict=False)
 def test_soft_block_run_continues():
     from argus.security.redactor.redactor import SecretRedactor
     redactor = SecretRedactor()
