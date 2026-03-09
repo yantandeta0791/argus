@@ -54,3 +54,7 @@ runs/
 # AI workflow planning (internal — not for public consumption)
 .planning/
 .claude/
+docs/plans/
+
+# Lock files (library — not application)
+uv.lock
