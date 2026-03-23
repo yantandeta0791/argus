@@ -65,3 +65,27 @@ def load_config(path: Path | str = "argus.yaml") -> ModelConfig:
         tasks=models_raw.get("tasks", {}) or {},
         spend=spend,
     )
+
+
+def load_hitl_config(raw: dict):
+    """Parse tools: and hitl: YAML sections into HITLConfig.
+
+    Accepts the raw dict from yaml.safe_load(argus.yaml).
+    Returns HITLConfig if any tools require approval or a timeout is set.
+    Returns None if neither section is present with relevant keys.
+
+    HITLConfig is imported lazily to avoid circular imports between argus.llm
+    and argus.security.
+    """
+    tools_raw = raw.get("tools", {}) or {}
+    hitl_raw = raw.get("hitl", {}) or {}
+    require_approval = {
+        name: True
+        for name, cfg in tools_raw.items()
+        if (cfg or {}).get("require_approval")
+    }
+    timeout = hitl_raw.get("timeout_seconds", None)
+    if not require_approval and timeout is None:
+        return None
+    from argus.security.hitl import HITLConfig  # lazy import — avoids circular dep
+    return HITLConfig(require_approval=require_approval, timeout_seconds=timeout)

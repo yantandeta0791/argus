@@ -64,3 +64,16 @@ class AuditUnavailableError(ArgusSecurityError):
         self.gate = "audit"
         self.blocked = ""
         self.rule = ""
+
+
+class ApprovalDeniedError(ArgusSecurityError):
+    """Raised when a HITL gate denies tool execution.
+
+    timed_out=True when denial was triggered by timeout, not human input.
+    """
+
+    def __init__(
+        self, gate: str, blocked: str, rule: str, timed_out: bool = False
+    ) -> None:
+        super().__init__(gate=gate, blocked=blocked, rule=rule)
+        self.timed_out = timed_out
