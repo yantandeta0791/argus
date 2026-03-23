@@ -40,6 +40,9 @@ autogen = [
     "autogen-agentchat>=0.4",
     "autogen-core>=0.4",
 ]
+mcp = [
+    "fastmcp>=2.9",
+]
 
 [project.scripts]
 argus = "argus.cli.main:app"
