@@ -17,11 +17,11 @@
 
 ### Human-in-the-Loop Gates
 
-- [ ] **HITL-01**: Developer can mark individual tools as require_approval: true in argus.yaml
-- [ ] **HITL-02**: When a require_approval tool is called, execution pauses and a clear prompt is printed to the terminal
-- [ ] **HITL-03**: Human can type "approve" or "deny" at the terminal prompt — deny stops the tool call and logs the rejection
-- [ ] **HITL-04**: Approval decision is written to the audit log with timestamp and tool arguments
-- [ ] **HITL-05**: Timeout can be configured in argus.yaml — if no response within N seconds, default to deny
+- [x] **HITL-01**: Developer can mark individual tools as require_approval: true in argus.yaml
+- [x] **HITL-02**: When a require_approval tool is called, execution pauses and a clear prompt is printed to the terminal
+- [x] **HITL-03**: Human can type "approve" or "deny" at the terminal prompt — deny stops the tool call and logs the rejection
+- [x] **HITL-04**: Approval decision is written to the audit log with timestamp and tool arguments
+- [x] **HITL-05**: Timeout can be configured in argus.yaml — if no response within N seconds, default to deny
 
 ### Policy-as-Code
 
@@ -83,11 +83,11 @@
 | ADPT-05 | Phase 4 | Complete |
 | ADPT-06 | Phase 4 | Complete |
 | ADPT-07 | Phase 3 | Complete |
-| HITL-01 | Phase 5 | Pending |
-| HITL-02 | Phase 5 | Pending |
-| HITL-03 | Phase 5 | Pending |
-| HITL-04 | Phase 5 | Pending |
-| HITL-05 | Phase 5 | Pending |
+| HITL-01 | Phase 5 | Complete |
+| HITL-02 | Phase 5 | Complete |
+| HITL-03 | Phase 5 | Complete |
+| HITL-04 | Phase 5 | Complete |
+| HITL-05 | Phase 5 | Complete |
 | POLC-01 | Phase 6 | Pending |
 | POLC-02 | Phase 6 | Pending |
 | POLC-03 | Phase 6 | Pending |

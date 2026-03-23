@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-02-PLAN.md — MCP adapter implementation GREEN
-last_updated: "2026-03-23T00:37:44.241Z"
-last_activity: 2026-03-23 — 04-01 MCP adapter RED test suite (stub fastmcp/mcp modules, gateway contract tests)
+status: completed
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-23T20:28:21.914Z"
+last_activity: 2026-03-23 — 04-02 MCP adapter implementation (ArgusMCPMiddleware, wrap_mcp_server, fastmcp optional dep)
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 80
+  total_plans: 7
+  completed_plans: 6
+  percent: 100
 ---
 
 # State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Every tool call passes through deterministic enforcement code the LLM cannot influence.
-**Current focus:** v0.3.0 — Phase 4: MCP Server Wrapper
+**Current focus:** v0.3.0 — Phase 5: Human-in-the-Loop Gates
 
 ## Current Position
 
-Phase: 4 (MCP Server Wrapper)
-Plan: 02 complete — 04-02 MCP adapter implementation GREEN
-Status: Phase 4 complete
-Last activity: 2026-03-23 — 04-02 MCP adapter implementation (ArgusMCPMiddleware, wrap_mcp_server, fastmcp optional dep)
+Phase: 5 (Human-in-the-Loop Gates)
+Plan: 01 complete — 05-01 HITL RED test suite written
+Status: Phase 5 in progress
+Last activity: 2026-03-23 — 05-01 HITL RED test suite (HITLGate, load_hitl_config, gateway sequencing, adapter propagation)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
 - Phases complete: 2/6
-- Plans complete: 5 (03-01, 03-02, 03-03, 04-01, 04-02)
-- Requirements shipped: 10/24 (ADPT-01 through ADPT-08 + ADPT-05, ADPT-06 confirmed shipped in 04-02)
+- Plans complete: 6 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01)
+- Requirements shipped: 10/24 (ADPT-01 through ADPT-08 + ADPT-05, ADPT-06 confirmed shipped in 04-02; HITL-01 through HITL-05 RED tests written in 05-01)
 
 ## Accumulated Context
 
@@ -67,11 +67,14 @@ Progress: [██████████] 100%
 | MCP ToolError stubbed as plain Exception | Tests work without fastmcp installed; real adapter raises ToolError (subclass of Exception) |
 | ArgusMCPMiddleware uses plain class (no Middleware inheritance) — FastMCP duck-types on on_call_tool | Avoids module-level fastmcp import; module importable without optional package installed |
 | fastmcp listed as optional extra (pip install argus[mcp]) | Importing argus.adapters.mcp without fastmcp installed raises no ImportError |
+| HITLGate._read_with_timeout patched via patch.object for timeout test | Allows None sentinel independent of retry logic — cleaner than patching builtins.input |
+| Gateway HITL tests mock argus.security.gateway.HITLGate class not instance | Plan 02 instantiates HITLGate internally from config.hitl; tests verify construction and check() delegation |
+| MCP HITL test asserts ToolError (Exception stub), not raw ApprovalDeniedError | Matches existing MCP error conversion pattern — ApprovalDeniedError is ArgusSecurityError subclass |
 
 ## Session Continuity
 
 Next action: Execute Phase 5 (HITL gates) — Phase 4 complete
-Stopped at: Completed 04-02-PLAN.md — MCP adapter implementation GREEN
+Stopped at: Completed 05-01-PLAN.md
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 
