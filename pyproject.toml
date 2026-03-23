@@ -33,6 +33,9 @@ dev = [
 langchain = [
     "langchain-core>=1.2.5",
 ]
+crewai = [
+    "crewai>=1.0",
+]
 
 [project.scripts]
 argus = "argus.cli.main:app"
