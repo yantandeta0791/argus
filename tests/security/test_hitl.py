@@ -1,0 +1,234 @@
+"""
+RED test suite for HITLGate unit behaviors and load_hitl_config() parsing.
+
+These tests import from modules that do NOT exist yet:
+  - argus.security.hitl (HITLGate, HITLConfig)
+  - argus.security.exceptions (ApprovalDeniedError)
+  - argus.llm.config (load_hitl_config)
+
+pytest will FAIL at collection time with ImportError until plan 02 implements
+these modules. This confirms the RED state required by the TDD workflow.
+
+Requirements covered: HITL-01, HITL-02, HITL-03, HITL-04, HITL-05
+"""
+
+from __future__ import annotations
+
+from unittest.mock import patch
+
+import pytest
+
+from argus.security.hitl import HITLGate, HITLConfig
+from argus.security.exceptions import ApprovalDeniedError
+from argus.llm.config import load_hitl_config
+
+
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
+
+
+def _make_config(**kwargs) -> HITLConfig:
+    """Construct an HITLConfig with sensible defaults for unit tests."""
+    defaults = {
+        "require_approval": {"delete_file": True},
+        "timeout_seconds": 30,
+    }
+    defaults.update(kwargs)
+    return HITLConfig(**defaults)
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
+class TestHITLGateApprove:
+    def test_approve_returns_none(self):
+        """HITL-01: HITLGate.check() returns None when human types 'approve'.
+
+        Covers the happy path: an interactive user explicitly approves the
+        pending tool call. The gate must return None (not raise).
+        """
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            result = gate.check(tool_name="delete_file", tool_input={"path": "/tmp/x"})
+
+        assert result is None
+
+
+class TestHITLGateDeny:
+    def test_deny_raises_approval_denied_error(self):
+        """HITL-02: HITLGate.check() raises ApprovalDeniedError when human types 'deny'.
+
+        Covers the explicit-deny path: a human operator rejects the call.
+        The error must be raised so the caller can handle it or propagate it.
+        """
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="deny"):
+            with pytest.raises(ApprovalDeniedError):
+                gate.check(tool_name="delete_file", tool_input={"path": "/tmp/x"})
+
+    def test_deny_timed_out_is_false(self):
+        """HITL-02/HITL-04: ApprovalDeniedError.timed_out is False on human-deny path.
+
+        Distinguishes explicit human denial from a timeout-triggered denial.
+        """
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="deny"):
+            with pytest.raises(ApprovalDeniedError) as exc_info:
+                gate.check(tool_name="delete_file", tool_input={"path": "/tmp/x"})
+
+        assert exc_info.value.timed_out is False
+
+
+class TestHITLGateRetry:
+    def test_invalid_input_twice_raises_approval_denied_error(self):
+        """HITL-03: HITLGate.check() auto-denies after two invalid inputs.
+
+        On the first invalid response the gate re-prompts. On the second
+        invalid response it auto-denies by raising ApprovalDeniedError.
+        The side_effect list simulates both inputs without touching stdin.
+        """
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", side_effect=["oops", "also_wrong"]):
+            with pytest.raises(ApprovalDeniedError):
+                gate.check(tool_name="delete_file", tool_input={"path": "/tmp/x"})
+
+
+class TestHITLGateTimeout:
+    def test_timeout_raises_approval_denied_error_with_timed_out_true(self):
+        """HITL-04: HITLGate.check() raises ApprovalDeniedError(timed_out=True) on timeout.
+
+        When _read_with_timeout returns None (the timeout sentinel) the gate
+        must treat the call as denied and set timed_out=True on the error.
+        """
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        with patch.object(gate, "_read_with_timeout", return_value=None):
+            with pytest.raises(ApprovalDeniedError) as exc_info:
+                gate.check(tool_name="delete_file", tool_input={"path": "/tmp/x"})
+
+        assert exc_info.value.timed_out is True
+
+
+class TestHITLGateSkip:
+    def test_skips_tool_not_in_require_approval(self):
+        """HITL-05: HITLGate.check() returns None immediately for unlisted tools.
+
+        Tools not in require_approval bypass the HITL prompt entirely. This
+        ensures low-risk tools (e.g., read_file) are not gated.
+        """
+        config = _make_config(
+            require_approval={"delete_file": True},
+            timeout_seconds=None,
+        )
+        gate = HITLGate(config=config)
+
+        # Should return immediately — no input() call should happen
+        with patch("builtins.input", side_effect=RuntimeError("should not prompt")):
+            result = gate.check(tool_name="read_file", tool_input={"path": "/tmp/x"})
+
+        assert result is None
+
+
+class TestApprovalDeniedErrorTimedOut:
+    def test_timed_out_true_only_on_timeout_path(self):
+        """HITL-04: timed_out distinguishes timeout denial from human denial.
+
+        Verify that the timed_out attribute is True for timeout, False for
+        an explicit human 'deny'. Both paths raise ApprovalDeniedError.
+        """
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        # Human-deny path
+        with patch("builtins.input", return_value="deny"):
+            with pytest.raises(ApprovalDeniedError) as human_exc:
+                gate.check(tool_name="delete_file", tool_input={})
+        assert human_exc.value.timed_out is False
+
+        # Timeout path
+        with patch.object(gate, "_read_with_timeout", return_value=None):
+            with pytest.raises(ApprovalDeniedError) as timeout_exc:
+                gate.check(tool_name="delete_file", tool_input={})
+        assert timeout_exc.value.timed_out is True
+
+
+class TestHITLGateBanner:
+    def test_banner_printed_before_prompt(self, capsys):
+        """HITL-01: HITLGate.check() prints [ARGUS HITL] banner to stdout before prompting.
+
+        The banner must include the tool name and pretty-printed JSON arguments
+        so the human operator can make an informed decision. Verified via
+        capsys to avoid any real stdin interaction.
+        """
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        # Approve so check() returns normally after printing the banner
+        with patch("builtins.input", return_value="approve"):
+            gate.check(tool_name="delete_file", tool_input={"path": "/tmp/sensitive"})
+
+        captured = capsys.readouterr()
+        assert "[ARGUS HITL]" in captured.out
+        assert "delete_file" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# load_hitl_config tests
+# ---------------------------------------------------------------------------
+
+
+def test_load_hitl_config_parses_tools():
+    """HITL-01: load_hitl_config parses tools section and filters by require_approval.
+
+    The function receives the result of yaml.safe_load on argus.yaml.
+    Only tools with require_approval: true appear in the returned HITLConfig.
+    Tools with require_approval: false (or absent) are omitted.
+    """
+    raw = {
+        "tools": {
+            "delete_file": {"require_approval": True},
+            "write_file": {"require_approval": True},
+            "read_file": {"require_approval": False},
+            "list_dir": {},  # omit — no require_approval key
+        }
+    }
+
+    config = load_hitl_config(raw)
+
+    assert config is not None
+    assert config.require_approval == {
+        "delete_file": True,
+        "write_file": True,
+    }
+    # read_file has require_approval: False → excluded
+    assert "read_file" not in config.require_approval
+    # list_dir has no key → excluded
+    assert "list_dir" not in config.require_approval
+
+
+def test_load_hitl_config_parses_timeout():
+    """HITL-01: load_hitl_config parses hitl.timeout_seconds; empty dict returns None.
+
+    Passing a hitl section with timeout_seconds must produce an HITLConfig
+    with that timeout. An empty dict (no relevant config) must return None.
+    """
+    raw_with_timeout = {"hitl": {"timeout_seconds": 60}}
+    config = load_hitl_config(raw_with_timeout)
+
+    assert config is not None
+    assert config.timeout_seconds == 60
+
+    # No tools or hitl sections → return None (no HITL config needed)
+    assert load_hitl_config({}) is None
