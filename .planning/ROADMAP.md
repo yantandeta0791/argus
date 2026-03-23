@@ -8,7 +8,7 @@
 
 ## Phases
 
-- [ ] **Phase 3: CrewAI + AutoGen Adapters** — Extend SecurityGateway to CrewAI and AutoGen with full enforcement parity and fail-closed guarantees
+- [x] **Phase 3: CrewAI + AutoGen Adapters** — Extend SecurityGateway to CrewAI and AutoGen with full enforcement parity and fail-closed guarantees (completed 2026-03-23)
 - [ ] **Phase 4: MCP Server Wrapper** — Wrap any MCP server so all tool invocations pass through the security stack
 - [ ] **Phase 5: Human-in-the-Loop Gates** — Terminal approval flow for high-risk tools, audit-logged decisions, configurable timeout
 - [ ] **Phase 6: Policy-as-Code** — Full declarative argus.yaml configuration for RBAC, secrets, egress, spend caps, and startup validation
@@ -29,7 +29,7 @@
   3. A permission violation on a CrewAI or AutoGen tool call results in a blocked execution, not a warning — the agent never receives a response
   4. Prompt injection, secret redaction, and egress checks all fire on CrewAI and AutoGen tool calls identically to how they fire on LangChain tool calls
   5. Both adapters have test coverage demonstrating fail-closed behavior under injection, permission denied, and egress violation conditions
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 03-01-PLAN.md — TDD test scaffolds: failing RED test suites for CrewAI and AutoGen adapters
@@ -96,7 +96,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 3. CrewAI + AutoGen Adapters | 2/3 | In Progress|  |
+| 3. CrewAI + AutoGen Adapters | 3/3 | Complete   | 2026-03-23 |
 | 4. MCP Server Wrapper | 0/? | Not started | - |
 | 5. Human-in-the-Loop Gates | 0/? | Not started | - |
 | 6. Policy-as-Code | 0/? | Not started | - |
