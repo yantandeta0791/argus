@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01-PLAN.md — MCP adapter RED test suite
-last_updated: "2026-03-23T00:34:20.878Z"
-last_activity: 2026-03-23 — 03-03 AutoGen adapter implementation (wrap_tools with FunctionTool closure pattern)
+stopped_at: Completed 04-02-PLAN.md — MCP adapter implementation GREEN
+last_updated: "2026-03-23T00:37:44.241Z"
+last_activity: 2026-03-23 — 04-01 MCP adapter RED test suite (stub fastmcp/mcp modules, gateway contract tests)
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
-  percent: 100
+  completed_plans: 5
+  percent: 80
 ---
 
 # State
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 4 (MCP Server Wrapper)
-Plan: 01 complete — 04-01 RED test suite done
-Status: In progress
-Last activity: 2026-03-23 — 04-01 MCP adapter RED test suite (stub fastmcp/mcp modules, gateway contract tests)
+Plan: 02 complete — 04-02 MCP adapter implementation GREEN
+Status: Phase 4 complete
+Last activity: 2026-03-23 — 04-02 MCP adapter implementation (ArgusMCPMiddleware, wrap_mcp_server, fastmcp optional dep)
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-- Phases complete: 1/6
-- Plans complete: 4 (03-01, 03-02, 03-03, 04-01)
-- Requirements shipped: 8/24 (ADPT-01, ADPT-02, ADPT-03, ADPT-04, ADPT-05, ADPT-06, ADPT-07, ADPT-08)
+- Phases complete: 2/6
+- Plans complete: 5 (03-01, 03-02, 03-03, 04-01, 04-02)
+- Requirements shipped: 10/24 (ADPT-01 through ADPT-08 + ADPT-05, ADPT-06 confirmed shipped in 04-02)
 
 ## Accumulated Context
 
@@ -65,11 +65,13 @@ Progress: [████████░░] 80%
 | AutoGen plain callable detection uses iscoroutinefunction(tool) | hasattr(tool, 'run_json') is unreliable — MagicMock auto-creates any attribute; iscoroutinefunction is False for BaseTool instances, True for async callables |
 | MCP tests use top-level import of argus.adapters.mcp | Ensures RED failure at pytest collection time, not inside test body |
 | MCP ToolError stubbed as plain Exception | Tests work without fastmcp installed; real adapter raises ToolError (subclass of Exception) |
+| ArgusMCPMiddleware uses plain class (no Middleware inheritance) — FastMCP duck-types on on_call_tool | Avoids module-level fastmcp import; module importable without optional package installed |
+| fastmcp listed as optional extra (pip install argus[mcp]) | Importing argus.adapters.mcp without fastmcp installed raises no ImportError |
 
 ## Session Continuity
 
-Next action: Execute plan 04-02 (MCP adapter implementation — GREEN step)
-Stopped at: Completed 04-01-PLAN.md — MCP adapter RED test suite
+Next action: Execute Phase 5 (HITL gates) — Phase 4 complete
+Stopped at: Completed 04-02-PLAN.md — MCP adapter implementation GREEN
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 
