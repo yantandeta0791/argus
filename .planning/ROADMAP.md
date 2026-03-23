@@ -44,7 +44,11 @@ Plans:
   1. A developer can pass an MCP server reference to a wrap_mcp_server() function and receive a security-wrapped MCP server that the rest of their code uses transparently
   2. Every tool invocation routed through the wrapped MCP server is subject to permission enforcement, injection scanning, secret redaction, egress check, and audit logging
   3. A security violation on an MCP tool call blocks the invocation and records it in the audit log — the MCP server never executes the blocked tool
-**Plans:** TBD
+**Plans:** 1/2 plans executed
+
+Plans:
+- [ ] 04-01-PLAN.md — TDD RED: write failing test suite for MCP adapter (stub fastmcp/mcp modules)
+- [ ] 04-02-PLAN.md — Implement argus/adapters/mcp.py + add fastmcp optional dep, turn tests GREEN
 
 ### Phase 5: Human-in-the-Loop Gates
 **Goal:** Developers can designate individual tools as requiring human approval before execution; when those tools are called, the agent pauses and waits for a terminal approve/deny decision that is recorded in the audit log.
@@ -96,8 +100,8 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 3. CrewAI + AutoGen Adapters | 3/3 | Complete   | 2026-03-23 |
-| 4. MCP Server Wrapper | 0/? | Not started | - |
+| 3. CrewAI + AutoGen Adapters | 3/3 | Complete    | 2026-03-23 |
+| 4. MCP Server Wrapper | 1/2 | In Progress|  |
 | 5. Human-in-the-Loop Gates | 0/? | Not started | - |
 | 6. Policy-as-Code | 0/? | Not started | - |
 | 7. Audit CLI + OTel Export | 0/? | Not started | - |
