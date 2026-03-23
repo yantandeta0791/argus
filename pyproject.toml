@@ -36,6 +36,10 @@ langchain = [
 crewai = [
     "crewai>=1.0",
 ]
+autogen = [
+    "autogen-agentchat>=0.4",
+    "autogen-core>=0.4",
+]
 
 [project.scripts]
 argus = "argus.cli.main:app"
