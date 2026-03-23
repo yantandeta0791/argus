@@ -24,6 +24,7 @@ import pytest
 
 from argus.adapters.autogen import wrap_tools
 from argus.security.exceptions import (
+    ApprovalDeniedError,
     EgressViolationError,
     InjectionDetectedError,
     PermissionDeniedError,
@@ -225,3 +226,28 @@ class TestArgusAutoGenToolWrapper:
             await secured_fn(query="test")
 
         tool.run_json.assert_called_once()
+
+
+    @pytest.mark.asyncio
+    async def test_approval_denied_propagates_from_autogen_wrapper(self):
+        """HITL-02: ApprovalDeniedError raised by pre_tool_call escapes the async wrapper.
+
+        The AutoGen adapter does not catch ArgusSecurityError subclasses — they
+        propagate unchanged through the secured async callable. ApprovalDeniedError
+        is a subclass of ArgusSecurityError, so it must escape unchanged.
+        The original tool must never be called.
+        """
+        tool = _make_tool_with_run_json()
+        gw = _make_gateway()
+        gw.pre_tool_call.side_effect = ApprovalDeniedError(
+            gate="hitl", blocked="delete_file", rule="require_approval"
+        )
+
+        wrapped = wrap_tools([tool], gateway=gw, agent_role="analyst")
+        secured_fn = _extract_secured_fn(wrapped[0])
+
+        with pytest.raises(ApprovalDeniedError):
+            await secured_fn(path="/tmp/sensitive")
+
+        # The underlying tool must NOT have been called after denial
+        tool.run_json.assert_not_called()

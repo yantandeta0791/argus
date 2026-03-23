@@ -12,6 +12,7 @@ import pytest
 
 from argus.adapters.langchain import ArgusToolWrapper, wrap_tools
 from argus.security.exceptions import InjectionDetectedError, PermissionDeniedError
+from argus.security.exceptions import ApprovalDeniedError
 
 
 def _make_tool(name: str = "search", invoke_return: str = "raw result") -> MagicMock:
@@ -122,3 +123,30 @@ class TestArgusToolWrapper:
 
         assert wrapper.description == "A search tool"
         assert wrapper.metadata == {"version": "1.0"}
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: HITL — ApprovalDeniedError propagation
+# ---------------------------------------------------------------------------
+
+
+def test_approval_denied_propagates_from_langchain_invoke():
+    """HITL-02: ApprovalDeniedError raised by gateway.pre_tool_call escapes invoke().
+
+    When a human (or timeout) denies a tool call, the LangChain adapter must
+    not swallow the error — it must propagate so the agent framework can handle it.
+    The underlying tool must never be called.
+    """
+    tool = _make_tool()
+    gw = _make_gateway()
+    gw.pre_tool_call.side_effect = ApprovalDeniedError(
+        gate="hitl", blocked="delete_file", rule="require_approval"
+    )
+
+    wrapper = ArgusToolWrapper(tool=tool, gateway=gw, agent_role="analyst")
+
+    with pytest.raises(ApprovalDeniedError):
+        wrapper.invoke({"path": "/tmp/sensitive"})
+
+    # The underlying tool must NOT have been called after denial
+    tool.invoke.assert_not_called()

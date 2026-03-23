@@ -6,10 +6,18 @@ Gate execution order:
     POST: shield.scan -> redactor.redact -> egress.check -> audit.send (post-call)
 
 These tests drive implementation of argus/security/gateway.py.
+
+Phase 5 additions (HITL sequencing):
+    Gate 1.5 inserted after permission, before audit in pre_tool_call.
+    HITLConfig and ApprovalDeniedError imported at module level to force RED
+    collection failure until plan 05-02 implements them.
 """
 
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch, call
+
+from argus.security.hitl import HITLConfig
+from argus.security.exceptions import ApprovalDeniedError
 
 
 # ── TDD RED: all these should fail before gateway.py is implemented ──────────
@@ -213,3 +221,130 @@ def test_gateway_config_dataclass_defaults():
     assert config.permissions is None
     assert config.prompt_shield_patterns == []
     assert config.egress_allowlist == []
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: HITL gate sequencing tests
+# ---------------------------------------------------------------------------
+
+
+def test_gateway_hitl_called_after_permission_before_audit():
+    """HITL gate (1.5) is invoked AFTER permission passes and BEFORE audit send.
+
+    Gate order in pre_tool_call must be: permission -> HITL -> audit.
+    Verified by asserting HITLGate.check() is called and audit.send follows it.
+    """
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    hitl_config = HITLConfig(
+        require_approval={"delete_file": True},
+        timeout_seconds=None,
+    )
+    config = GatewayConfig(hitl=hitl_config)
+
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    call_order = []
+
+    with patch("argus.security.gateway.HITLGate") as MockHITLGate:
+        mock_gate_instance = MockHITLGate.return_value
+        mock_gate_instance.check.side_effect = lambda **kw: call_order.append("hitl")
+        mock_audit.send.side_effect = lambda *a, **kw: call_order.append("audit")
+
+        gateway.pre_tool_call("analyst", "delete_file", {"path": "/tmp/x"})
+
+    assert "hitl" in call_order
+    assert "audit" in call_order
+    assert call_order.index("hitl") < call_order.index("audit"), (
+        "HITL gate must fire before audit send"
+    )
+
+
+def test_gateway_approval_denied_propagates_audit_not_called():
+    """When HITLGate.check() raises ApprovalDeniedError, audit.send is NOT called.
+
+    A denied call must not be recorded in the audit log as if it succeeded.
+    The ApprovalDeniedError must propagate out of pre_tool_call.
+    """
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    hitl_config = HITLConfig(
+        require_approval={"delete_file": True},
+        timeout_seconds=None,
+    )
+    config = GatewayConfig(hitl=hitl_config)
+
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    with patch("argus.security.gateway.HITLGate") as MockHITLGate:
+        mock_gate_instance = MockHITLGate.return_value
+        mock_gate_instance.check.side_effect = ApprovalDeniedError(
+            gate="hitl", blocked="delete_file", rule="require_approval"
+        )
+
+        with pytest.raises(ApprovalDeniedError):
+            gateway.pre_tool_call("analyst", "delete_file", {"path": "/tmp/x"})
+
+    # Audit must NOT record a denied HITL call
+    mock_audit.send.assert_not_called()
+
+
+def test_gateway_no_hitl_config_skips_hitl_gate():
+    """When hitl is None in GatewayConfig, pre_tool_call skips the HITL gate entirely.
+
+    Existing behavior (no hitl config) must be unchanged. The HITLGate class
+    must never be instantiated when config.hitl is None.
+    """
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    config = GatewayConfig()  # hitl=None by default
+
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    with patch("argus.security.gateway.HITLGate") as MockHITLGate:
+        gateway.pre_tool_call("analyst", "read_file", {"path": "/tmp/x"})
+
+    # HITLGate must never be instantiated when no config provided
+    MockHITLGate.assert_not_called()
+
+
+def test_gateway_audit_receives_hitl_decision_event():
+    """Audit log receives a hitl_decision event after HITL approval.
+
+    After HITLGate.check() returns (approval), an audit event with
+    event_type='hitl_decision' must be sent so the decision is traceable.
+    """
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    hitl_config = HITLConfig(
+        require_approval={"delete_file": True},
+        timeout_seconds=None,
+    )
+    config = GatewayConfig(hitl=hitl_config)
+
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    with patch("argus.security.gateway.HITLGate") as MockHITLGate:
+        # check() returns None → approved
+        MockHITLGate.return_value.check.return_value = None
+
+        gateway.pre_tool_call("analyst", "delete_file", {"path": "/tmp/x"})
+
+    # Extract all event_type values from audit.send calls
+    sent_events = [
+        call_args[0][0]
+        for call_args in mock_audit.send.call_args_list
+        if call_args[0]
+    ]
+    event_types = [e.get("event_type") for e in sent_events if isinstance(e, dict)]
+    assert "hitl_decision" in event_types, (
+        "Audit must record a hitl_decision event after approval"
+    )

@@ -15,6 +15,7 @@ import pytest
 
 from argus.adapters.crewai import ArgusCrewAIToolWrapper, wrap_tools
 from argus.security.exceptions import (
+    ApprovalDeniedError,
     EgressViolationError,
     InjectionDetectedError,
     PermissionDeniedError,
@@ -145,3 +146,30 @@ def test_wrap_tools_wraps_list():
     assert len(wrapped) == 2
     assert wrapped[0].name == "tool_a"
     assert wrapped[1].name == "tool_b"
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: HITL — ApprovalDeniedError propagation
+# ---------------------------------------------------------------------------
+
+
+def test_approval_denied_propagates_from_crewai_run():
+    """HITL-02: ApprovalDeniedError raised by gateway.pre_tool_call escapes run().
+
+    When a human (or timeout) denies a tool call, the CrewAI adapter must
+    not swallow the error — it must propagate so the agent framework can handle it.
+    The underlying tool must never be called.
+    """
+    tool = _make_tool()
+    gw = _make_gateway()
+    gw.pre_tool_call.side_effect = ApprovalDeniedError(
+        gate="hitl", blocked="delete_file", rule="require_approval"
+    )
+
+    wrapper = ArgusCrewAIToolWrapper(tool=tool, gateway=gw, agent_role="analyst")
+
+    with pytest.raises(ApprovalDeniedError):
+        wrapper.run({"path": "/tmp/sensitive"})
+
+    # The underlying tool must NOT have been called after denial
+    tool.run.assert_not_called()

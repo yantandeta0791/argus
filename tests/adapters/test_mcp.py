@@ -25,6 +25,7 @@ import pytest
 
 from argus.adapters.mcp import wrap_mcp_server, ArgusMCPMiddleware  # noqa: E402
 from argus.security.exceptions import (
+    ApprovalDeniedError,
     InjectionDetectedError,
     PermissionDeniedError,
 )
@@ -248,3 +249,32 @@ class TestWrapMcpServer:
         assert returned is server
         assert len(server.middleware) == 1
         assert isinstance(server.middleware[0], ArgusMCPMiddleware)
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: HITL — ApprovalDeniedError propagation (MCP converts to ToolError)
+# ---------------------------------------------------------------------------
+
+
+class TestHITLApprovalDeniedMCP:
+    @pytest.mark.asyncio
+    async def test_approval_denied_converts_to_tool_error(self):
+        """HITL-02: ApprovalDeniedError from pre_tool_call is converted to ToolError.
+
+        ApprovalDeniedError is a subclass of ArgusSecurityError. The MCP adapter
+        already catches ArgusSecurityError and raises ToolError. ApprovalDeniedError
+        must follow the same path so MCP clients receive a ToolError (not a raw
+        Python exception they cannot handle).
+        """
+        gw = _make_gateway()
+        gw.pre_tool_call.side_effect = ApprovalDeniedError(
+            gate="hitl", blocked="delete_file", rule="require_approval"
+        )
+        mw = ArgusMCPMiddleware(gateway=gw, agent_role="analyst")
+
+        call_next = None  # Never reached — ApprovalDeniedError fires pre-tool
+        ctx = _StubMiddlewareContext(name="delete_file", arguments={"path": "/tmp/x"})
+
+        # ToolError is stubbed as plain Exception in the _patch_mcp_modules fixture
+        with pytest.raises(Exception):
+            await mw.on_call_tool(ctx, call_next)
