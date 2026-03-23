@@ -10,7 +10,7 @@
 
 - [x] **Phase 3: CrewAI + AutoGen Adapters** — Extend SecurityGateway to CrewAI and AutoGen with full enforcement parity and fail-closed guarantees (completed 2026-03-23)
 - [x] **Phase 4: MCP Server Wrapper** — Wrap any MCP server so all tool invocations pass through the security stack (completed 2026-03-23)
-- [ ] **Phase 5: Human-in-the-Loop Gates** — Terminal approval flow for high-risk tools, audit-logged decisions, configurable timeout
+- [x] **Phase 5: Human-in-the-Loop Gates** — Terminal approval flow for high-risk tools, audit-logged decisions, configurable timeout (completed 2026-03-23)
 - [ ] **Phase 6: Policy-as-Code** — Full declarative argus.yaml configuration for RBAC, secrets, egress, spend caps, and startup validation
 - [ ] **Phase 7: Audit CLI + OTel Export** — `argus audit` command with filtering and push export of security events to Datadog/Grafana/OTLP
 - [ ] **Phase 8: REST API Sidecar** — `argus serve` exposes a /tool-call endpoint enabling non-Python agents to use Argus
@@ -59,7 +59,7 @@ Plans:
   2. When a require_approval tool is triggered, the terminal prints a clear prompt showing the tool name and its arguments, and execution is fully paused until input arrives
   3. Typing "approve" resumes the tool call; typing "deny" stops it and logs the rejection with tool arguments and timestamp in the audit log
   4. If no response is received within the configured timeout period, the tool call is automatically denied and logged — no silent hang
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 05-01-PLAN.md — TDD RED: write failing test suite for HITLGate, gateway sequencing, and adapter propagation
@@ -106,7 +106,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 3. CrewAI + AutoGen Adapters | 3/3 | Complete    | 2026-03-23 |
 | 4. MCP Server Wrapper | 2/2 | Complete   | 2026-03-23 |
-| 5. Human-in-the-Loop Gates | 1/2 | In Progress|  |
+| 5. Human-in-the-Loop Gates | 2/2 | Complete   | 2026-03-23 |
 | 6. Policy-as-Code | 0/? | Not started | - |
 | 7. Audit CLI + OTel Export | 0/? | Not started | - |
 | 8. REST API Sidecar | 0/? | Not started | - |

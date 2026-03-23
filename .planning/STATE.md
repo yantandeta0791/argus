@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
-status: completed
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-23T20:28:21.914Z"
-last_activity: 2026-03-23 — 04-02 MCP adapter implementation (ArgusMCPMiddleware, wrap_mcp_server, fastmcp optional dep)
+status: executing
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-23T20:35:16.294Z"
+last_activity: 2026-03-23 — 05-01 HITL RED test suite (HITLGate, load_hitl_config, gateway sequencing, adapter propagation)
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 6
-  percent: 100
+  completed_plans: 7
+  percent: 86
 ---
 
 # State
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 5 (Human-in-the-Loop Gates)
-Plan: 01 complete — 05-01 HITL RED test suite written
-Status: Phase 5 in progress
-Last activity: 2026-03-23 — 05-01 HITL RED test suite (HITLGate, load_hitl_config, gateway sequencing, adapter propagation)
+Plan: 02 complete — HITL gate implementation (HITLGate, ApprovalDeniedError, gateway Gate 1.5)
+Status: Phase 5 complete
+Last activity: 2026-03-23 — 05-02 HITL gate implementation (HITLGate, HITLConfig, ApprovalDeniedError, load_hitl_config, gateway Gate 1.5)
 
-Progress: [█████████░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-- Phases complete: 2/6
-- Plans complete: 6 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01)
-- Requirements shipped: 10/24 (ADPT-01 through ADPT-08 + ADPT-05, ADPT-06 confirmed shipped in 04-02; HITL-01 through HITL-05 RED tests written in 05-01)
+- Phases complete: 3/6
+- Plans complete: 7 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02)
+- Requirements shipped: 15/24 (ADPT-01 through ADPT-08 shipped in phase 3-4; HITL-01 through HITL-05 shipped in 05-02)
 
 ## Accumulated Context
 
@@ -70,11 +70,13 @@ Progress: [█████████░] 86%
 | HITLGate._read_with_timeout patched via patch.object for timeout test | Allows None sentinel independent of retry logic — cleaner than patching builtins.input |
 | Gateway HITL tests mock argus.security.gateway.HITLGate class not instance | Plan 02 instantiates HITLGate internally from config.hitl; tests verify construction and check() delegation |
 | MCP HITL test asserts ToolError (Exception stub), not raw ApprovalDeniedError | Matches existing MCP error conversion pattern — ApprovalDeniedError is ArgusSecurityError subclass |
+| Lazy HITLGate instantiation per pre_tool_call call (not __init__) | Module-level HITLGate name must stay patchable; stored instance escapes patch scope in tests |
+| HITL deny path re-raises without audit.send | Denied calls must not produce tool_call_pre audit entries; hitl_decision only logged on approve |
 
 ## Session Continuity
 
-Next action: Execute Phase 5 (HITL gates) — Phase 4 complete
-Stopped at: Completed 05-01-PLAN.md
+Next action: Execute Phase 6 (policy-as-code) — Phase 5 complete
+Stopped at: Completed 05-02-PLAN.md
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 
