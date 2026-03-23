@@ -263,10 +263,11 @@ def test_gateway_hitl_called_after_permission_before_audit():
 
 
 def test_gateway_approval_denied_propagates_audit_not_called():
-    """When HITLGate.check() raises ApprovalDeniedError, audit.send is NOT called.
+    """When HITLGate.check() raises ApprovalDeniedError, a hitl_decision event IS logged.
 
-    A denied call must not be recorded in the audit log as if it succeeded.
-    The ApprovalDeniedError must propagate out of pre_tool_call.
+    A denied call must be recorded in the audit log with approved=False.
+    The ApprovalDeniedError must still propagate out of pre_tool_call.
+    A tool_call_pre event must NOT be sent (the tool never executes).
     """
     from argus.security.gateway import SecurityGateway, GatewayConfig
     from argus.security.audit.logger import AuditLogger
@@ -289,8 +290,15 @@ def test_gateway_approval_denied_propagates_audit_not_called():
         with pytest.raises(ApprovalDeniedError):
             gateway.pre_tool_call("analyst", "delete_file", {"path": "/tmp/x"})
 
-    # Audit must NOT record a denied HITL call
-    mock_audit.send.assert_not_called()
+    # Audit must record the denial as a hitl_decision event
+    mock_audit.send.assert_called_once()
+    sent = mock_audit.send.call_args[0][0]
+    assert sent["event_type"] == "hitl_decision"
+    assert sent["approved"] is False
+    assert sent["tool_name"] == "delete_file"
+    # tool_call_pre must NOT be sent — the tool never executes
+    event_types = [call[0][0]["event_type"] for call in mock_audit.send.call_args_list]
+    assert "tool_call_pre" not in event_types
 
 
 def test_gateway_no_hitl_config_skips_hitl_gate():

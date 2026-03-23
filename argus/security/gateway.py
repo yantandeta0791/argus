@@ -113,8 +113,17 @@ class SecurityGateway:
                         "tool_input": tool_input,
                     }
                 )
-            except ApprovalDeniedError:
-                # Denied — re-raise without logging a successful pre-call event
+            except ApprovalDeniedError as exc:
+                # Denied — log the decision before re-raising
+                self._audit.send(
+                    {
+                        "event_type": "hitl_decision",
+                        "approved": False,
+                        "timed_out": exc.timed_out,
+                        "tool_name": tool_name,
+                        "tool_input": tool_input,
+                    }
+                )
                 raise
 
         # Gate 2: Audit pre-call (hard stop — fail-closed)
