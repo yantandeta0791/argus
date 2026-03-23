@@ -15,7 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from argus.security.exceptions import ArgusSecurityError
+from argus.security.exceptions import ArgusSecurityError, ApprovalDeniedError
+from argus.security.hitl import HITLConfig, HITLGate
 from argus.security.permission.enforcer import PermissionEnforcer
 from argus.security.permission.policy import PolicyConfig
 from argus.security.prompt_shield.shield import PromptShield
@@ -35,6 +36,7 @@ class GatewayConfig:
     permissions: Optional[PolicyConfig] = None
     prompt_shield_patterns: list[str] = field(default_factory=list)
     egress_allowlist: list[str] = field(default_factory=list)
+    hitl: Optional[HITLConfig] = None
 
 
 class SecurityGateway:
@@ -53,6 +55,9 @@ class SecurityGateway:
         self._redactor = SecretRedactor()
         self._audit = audit_logger
         self._obs = obs
+        # Store hitl config; HITLGate is instantiated lazily in pre_tool_call so
+        # the module-level HITLGate reference remains patchable during tests.
+        self._hitl_config = config.hitl
         # EgressChecker with a closure sink that forwards to obs if configured (Phase 7)
         self._security_events: list[SecurityEvent] = []
 
@@ -92,6 +97,25 @@ class SecurityGateway:
                 )
                 self._obs.on_security_event(event)
             raise
+
+        # Gate 1.5: HITL approval gate (runs only when configured)
+        if self._hitl_config and self._hitl_config.needs_approval(tool_name):
+            try:
+                HITLGate(self._hitl_config).check(
+                    tool_name=tool_name, tool_input=tool_input
+                )
+                # Approved — log the decision before continuing to Gate 2
+                self._audit.send(
+                    {
+                        "event_type": "hitl_decision",
+                        "approved": True,
+                        "tool_name": tool_name,
+                        "tool_input": tool_input,
+                    }
+                )
+            except ApprovalDeniedError:
+                # Denied — re-raise without logging a successful pre-call event
+                raise
 
         # Gate 2: Audit pre-call (hard stop — fail-closed)
         self._audit.send(

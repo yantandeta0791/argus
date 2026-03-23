@@ -30,3 +30,17 @@ spend:
   per_task_usd: null
   per_session_usd: null
   per_day_usd: null
+
+# Tool-level HITL configuration (HITL-01)
+# Mark individual tools as requiring human approval before execution.
+# Uncomment and call load_hitl_config() from your bootstrap to activate.
+# tools:
+#   delete_file:
+#     require_approval: true
+#   write_file:
+#     require_approval: true
+
+# Global HITL timeout (HITL-05)
+# Time in seconds to wait for terminal input before auto-denying.
+# hitl:
+#   timeout_seconds: 30
