@@ -189,3 +189,25 @@ def load_spend_profiles(raw: dict, active_profile: str | None = None) -> SpendCo
         profile_raw = {k: v for k, v in spend_raw.items() if k != "profiles"}
     spend_kwargs = {k: v for k, v in (profile_raw or {}).items() if v is not None}
     return SpendConfig(**spend_kwargs)
+
+
+def load_gateway_config(raw: dict):
+    """Assemble a GatewayConfig from a raw yaml.safe_load dict.
+
+    Calls all section loaders and returns a fully populated GatewayConfig.
+    Raises ConfigValidationError on any invalid policy rule.
+    Lazy-imports GatewayConfig to avoid circular imports between argus.llm and argus.security.
+    """
+    from argus.security.gateway import GatewayConfig
+
+    permissions = load_rbac_config(raw)
+    secrets = load_secrets_config(raw)
+    egress = load_egress_config(raw)
+    hitl = load_hitl_config(raw)
+
+    return GatewayConfig(
+        permissions=permissions,
+        prompt_shield_patterns=secrets.patterns,
+        egress_allowlist=egress,
+        hitl=hitl,
+    )
