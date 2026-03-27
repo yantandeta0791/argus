@@ -32,3 +32,61 @@ def test_role_immutable(mock_policy_config):
     # Enforcement result must not change based on external attribute mutation
     # (Real implementation should use __slots__ or property-based protection)
     assert original_result_raises  # deny was consistent before mutation attempt
+
+
+# --- POLC-01: Wildcard and deny enforcer tests ---
+
+
+def test_wildcard_allow_permits_any_tool():
+    from argus.security.permission.enforcer import PermissionEnforcer
+    from argus.security.permission.policy import PolicyConfig, PolicyRule
+
+    config = PolicyConfig(rules=[PolicyRule(role="admin", tool="*", effect="allow")])
+    enforcer = PermissionEnforcer(config)
+    # Must not raise — wildcard allow grants admin access to any tool
+    enforcer.enforce("admin", "any_tool")
+
+
+def test_wildcard_allow_does_not_grant_other_roles():
+    from argus.security.permission.enforcer import PermissionEnforcer
+    from argus.security.permission.policy import PolicyConfig, PolicyRule
+    from argus.security.exceptions import PermissionDeniedError
+
+    config = PolicyConfig(rules=[PolicyRule(role="admin", tool="*", effect="allow")])
+    enforcer = PermissionEnforcer(config)
+    # analyst has no rules — must be denied
+    with pytest.raises(PermissionDeniedError):
+        enforcer.enforce("analyst", "any_tool")
+
+
+def test_deny_rule_blocks_even_with_wildcard_allow():
+    from argus.security.permission.enforcer import PermissionEnforcer
+    from argus.security.permission.policy import PolicyConfig, PolicyRule
+    from argus.security.exceptions import PermissionDeniedError
+
+    config = PolicyConfig(
+        rules=[
+            PolicyRule(role="admin", tool="*", effect="allow"),
+            PolicyRule(role="admin", tool="delete_records", effect="deny"),
+        ]
+    )
+    enforcer = PermissionEnforcer(config)
+    # deny rule must override the wildcard allow
+    with pytest.raises(PermissionDeniedError):
+        enforcer.enforce("admin", "delete_records")
+
+
+def test_deny_rule_blocks_specific_tool():
+    from argus.security.permission.enforcer import PermissionEnforcer
+    from argus.security.permission.policy import PolicyConfig, PolicyRule
+    from argus.security.exceptions import PermissionDeniedError
+
+    config = PolicyConfig(
+        rules=[
+            PolicyRule(role="analyst", tool="read_db", effect="allow"),
+            PolicyRule(role="analyst", tool="delete_records", effect="deny"),
+        ]
+    )
+    enforcer = PermissionEnforcer(config)
+    with pytest.raises(PermissionDeniedError):
+        enforcer.enforce("analyst", "delete_records")
