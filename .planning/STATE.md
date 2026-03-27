@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
-status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-23T20:35:16.294Z"
-last_activity: 2026-03-23 — 05-01 HITL RED test suite (HITLGate, load_hitl_config, gateway sequencing, adapter propagation)
+status: completed
+stopped_at: Completed 06-01-PLAN.md (RED test suite for policy-as-code)
+last_updated: "2026-03-27T17:15:24.929Z"
+last_activity: 2026-03-23 — 05-02 HITL gate implementation (HITLGate, HITLConfig, ApprovalDeniedError, load_hitl_config, gateway Gate 1.5)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 86
+  total_plans: 10
+  completed_plans: 8
+  percent: 100
 ---
 
 # State
@@ -25,17 +25,17 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 
 ## Current Position
 
-Phase: 5 (Human-in-the-Loop Gates)
-Plan: 02 complete — HITL gate implementation (HITLGate, ApprovalDeniedError, gateway Gate 1.5)
-Status: Phase 5 complete
-Last activity: 2026-03-23 — 05-02 HITL gate implementation (HITLGate, HITLConfig, ApprovalDeniedError, load_hitl_config, gateway Gate 1.5)
+Phase: 6 (Policy-as-Code)
+Plan: 01 complete — RED test suite (23 tests in test_config.py + 4 in test_permission.py)
+Status: Phase 6 in progress
+Last activity: 2026-03-27 — 06-01 RED test suite for POLC-01 through POLC-05 + integration
 
-Progress: [██████████] 100%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
-- Phases complete: 3/6
-- Plans complete: 7 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02)
+- Phases complete: 3/6 (phases 1-5; phase 6 in progress)
+- Plans complete: 8 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02, 06-01)
 - Requirements shipped: 15/24 (ADPT-01 through ADPT-08 shipped in phase 3-4; HITL-01 through HITL-05 shipped in 05-02)
 
 ## Accumulated Context
@@ -72,11 +72,13 @@ Progress: [██████████] 100%
 | MCP HITL test asserts ToolError (Exception stub), not raw ApprovalDeniedError | Matches existing MCP error conversion pattern — ApprovalDeniedError is ArgusSecurityError subclass |
 | Lazy HITLGate instantiation per pre_tool_call call (not __init__) | Module-level HITLGate name must stay patchable; stored instance escapes patch scope in tests |
 | HITL deny path re-raises without audit.send | Denied calls must not produce tool_call_pre audit entries; hitl_decision only logged on approve |
+| 06-01 RED test imports inside function bodies | Ensures ImportError at call time not collection time — matches existing test_config.py style |
+| ARGUS_SPEND_PROFILE env var for spend profiles | Consistent with Argus env var naming convention (ARGUS_ prefix) |
 
 ## Session Continuity
 
 Next action: Execute Phase 6 (policy-as-code) — Phase 5 complete
-Stopped at: Completed 05-02-PLAN.md
+Stopped at: Completed 06-01-PLAN.md (RED test suite for policy-as-code)
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 

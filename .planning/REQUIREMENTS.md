@@ -25,11 +25,11 @@
 
 ### Policy-as-Code
 
-- [ ] **POLC-01**: Developer can define RBAC roles and allowed/denied tools entirely in argus.yaml — no Python Casbin config required
-- [ ] **POLC-02**: Developer can define custom secret detection patterns (regex) in argus.yaml — applied alongside built-in patterns
-- [ ] **POLC-03**: Developer can define egress allowlist (domains/IPs) in argus.yaml — full declarative config
-- [ ] **POLC-04**: Developer can define named spend cap profiles (e.g. dev/staging/prod) in argus.yaml and select profile at runtime
-- [ ] **POLC-05**: argus.yaml validation reports clear errors for misconfigured policy rules on startup
+- [x] **POLC-01**: Developer can define RBAC roles and allowed/denied tools entirely in argus.yaml — no Python Casbin config required
+- [x] **POLC-02**: Developer can define custom secret detection patterns (regex) in argus.yaml — applied alongside built-in patterns
+- [x] **POLC-03**: Developer can define egress allowlist (domains/IPs) in argus.yaml — full declarative config
+- [x] **POLC-04**: Developer can define named spend cap profiles (e.g. dev/staging/prod) in argus.yaml and select profile at runtime
+- [x] **POLC-05**: argus.yaml validation reports clear errors for misconfigured policy rules on startup
 
 ### Operationalization
 
@@ -88,11 +88,11 @@
 | HITL-03 | Phase 5 | Complete |
 | HITL-04 | Phase 5 | Complete |
 | HITL-05 | Phase 5 | Complete |
-| POLC-01 | Phase 6 | Pending |
-| POLC-02 | Phase 6 | Pending |
-| POLC-03 | Phase 6 | Pending |
-| POLC-04 | Phase 6 | Pending |
-| POLC-05 | Phase 6 | Pending |
+| POLC-01 | Phase 6 | Complete |
+| POLC-02 | Phase 6 | Complete |
+| POLC-03 | Phase 6 | Complete |
+| POLC-04 | Phase 6 | Complete |
+| POLC-05 | Phase 6 | Complete |
 | OPS-01 | Phase 7 | Pending |
 | OPS-02 | Phase 7 | Pending |
 | OPS-03 | Phase 7 | Pending |
