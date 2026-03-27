@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: completed
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-03-27T20:42:41.746Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-27T20:47:37.868Z"
 last_activity: 2026-03-27 — 07-03 OtelConfig, load_otel_config, emit_security_violation, SecurityGateway OTel wiring
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
   percent: 100
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 
 ## Current Position
 
-Phase: 7 (Audit CLI + OTel Export) — COMPLETE
-Plan: 03 complete — OTel config loading, violation span emission, SecurityGateway wiring (OPS-03, OPS-04 GREEN)
-Status: Phase 7 fully complete — all 13 plans complete, all 24 requirements shipped
-Last activity: 2026-03-27 — 07-03 OtelConfig, load_otel_config, emit_security_violation, SecurityGateway OTel wiring
+Phase: 8 (REST API Sidecar) — COMPLETE
+Plan: 02 complete — Full REST sidecar, /tool-call endpoint, HITL guard, argus serve CLI (OPS-05, OPS-06 GREEN)
+Status: Phase 8 fully complete — all 15 plans complete, all requirements shipped
+Last activity: 2026-03-27 — 08-02 FastAPI sidecar, build_app() testable seam, serve_command, 10 tests GREEN
 
 Progress: [██████████] 100%
 
@@ -84,11 +84,14 @@ Progress: [██████████] 100%
 | SecurityGateway security_otel is constructor-injected, not built internally | Separation of concerns; caller controls emitter lifecycle |
 | Egress gate does not emit violation spans in v1 | Egress is log-only (not a blocked outcome) — span emission only for blocked/denied calls |
 | Phase 08 P01 | 3 | 2 tasks | 4 files |
+| Phase 08-rest-api-sidecar P02 | 15 | 2 tasks | 2 files |
+| isinstance(hitl_config, HITLConfig) guard in /tool-call | MagicMock auto-creates _hitl_config as truthy mock; isinstance prevents false HITL 503 for non-HITL gateways in tests |
+| Pydantic models at module level not inside build_app | FastAPI annotation resolver fails for locally-scoped Pydantic models; all requests returned 422 until moved to module scope |
 
 ## Session Continuity
 
 Next action: Execute Phase 7 Plan 03 — OTel config loading, violation spans, gateway wiring (OPS-03, OPS-04 GREEN)
-Stopped at: Completed 08-01-PLAN.md
+Stopped at: Completed 08-02-PLAN.md
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 

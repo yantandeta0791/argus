@@ -13,7 +13,7 @@
 - [x] **Phase 5: Human-in-the-Loop Gates** — Terminal approval flow for high-risk tools, audit-logged decisions, configurable timeout (completed 2026-03-23)
 - [x] **Phase 6: Policy-as-Code** — Full declarative argus.yaml configuration for RBAC, secrets, egress, spend caps, and startup validation (completed 2026-03-27)
 - [x] **Phase 7: Audit CLI + OTel Export** — `argus audit` command with filtering and push export of security events to Datadog/Grafana/OTLP (completed 2026-03-27)
-- [ ] **Phase 8: REST API Sidecar** — `argus serve` exposes a /tool-call endpoint enabling non-Python agents to use Argus
+- [x] **Phase 8: REST API Sidecar** — `argus serve` exposes a /tool-call endpoint enabling non-Python agents to use Argus (completed 2026-03-27)
 
 ---
 
@@ -106,7 +106,7 @@ Plans:
   1. Running `argus serve` starts a local HTTP server and prints the address — the process stays alive until interrupted
   2. A POST to /tool-call with a JSON body containing tool name and arguments returns a JSON response with an allow/block decision and the corresponding audit entry
   3. A blocked tool call from the REST sidecar produces an audit log entry identical in structure to one blocked by the Python adapter — there is no second-class path through the REST interface
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 08-01-PLAN.md — TDD RED: write failing test suite for argus serve CLI and /tool-call endpoint (OPS-05, OPS-06)
@@ -123,7 +123,7 @@ Plans:
 | 5. Human-in-the-Loop Gates | 2/2 | Complete   | 2026-03-23 |
 | 6. Policy-as-Code | 3/3 | Complete   | 2026-03-27 |
 | 7. Audit CLI + OTel Export | 3/3 | Complete   | 2026-03-27 |
-| 8. REST API Sidecar | 1/2 | In Progress|  |
+| 8. REST API Sidecar | 2/2 | Complete   | 2026-03-27 |
 
 ---
 *Roadmap created: 2026-03-15*
