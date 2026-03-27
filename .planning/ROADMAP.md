@@ -91,7 +91,12 @@ Plans:
   2. Running `argus audit --filter` with type, severity, or time range flags returns only the matching events — all other events are hidden
   3. A developer can configure an OTel exporter endpoint (Datadog, Grafana, or OTLP) in argus.yaml and have security events pushed to that endpoint without code changes
   4. Permission denied, injection detected, and credential exposed events each emit an OTel span with structured attributes (event type, tool name, severity, agent role)
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — TDD RED: write failing test suites for all OPS-01 through OPS-04 behaviors
+- [ ] 07-02-PLAN.md — Implement argus audit CLI command with streaming reader, Rich panels, and filter flags (OPS-01, OPS-02)
+- [ ] 07-03-PLAN.md — OtelConfig + load_otel_config + emit_security_violation + SecurityGateway violation span wiring (OPS-03, OPS-04)
 
 ### Phase 8: REST API Sidecar
 **Goal:** Non-Python agents can use Argus by sending tool call requests to a local REST sidecar started with `argus serve`, which runs the full security stack and returns an allow/block decision with an audit entry.
@@ -113,7 +118,7 @@ Plans:
 | 4. MCP Server Wrapper | 2/2 | Complete   | 2026-03-23 |
 | 5. Human-in-the-Loop Gates | 2/2 | Complete   | 2026-03-23 |
 | 6. Policy-as-Code | 3/3 | Complete   | 2026-03-27 |
-| 7. Audit CLI + OTel Export | 0/? | Not started | - |
+| 7. Audit CLI + OTel Export | 0/3 | In progress | - |
 | 8. REST API Sidecar | 0/? | Not started | - |
 
 ---
