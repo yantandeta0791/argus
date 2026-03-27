@@ -77,3 +77,9 @@ class ApprovalDeniedError(ArgusSecurityError):
     ) -> None:
         super().__init__(gate=gate, blocked=blocked, rule=rule)
         self.timed_out = timed_out
+
+
+class ConfigValidationError(ValueError):
+    """Raised at startup when argus.yaml contains invalid policy rules."""
+
+    pass
