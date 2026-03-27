@@ -37,8 +37,8 @@
 - [x] **OPS-02**: `argus audit --filter` accepts type, severity, and time range flags to query specific events
 - [x] **OPS-03**: Developer can configure OTel exporters in argus.yaml to push security events to external systems (Datadog, Grafana, OTLP endpoint)
 - [x] **OPS-04**: Security violations (permission denied, injection detected, credential exposed) emit OTel spans with structured attributes
-- [ ] **OPS-05**: Developer can start Argus as a REST API sidecar (`argus serve`) that exposes a /tool-call endpoint
-- [ ] **OPS-06**: The REST sidecar accepts tool call requests, runs the full security stack, and returns allow/block + audit entry — enabling non-Python agents to use Argus
+- [x] **OPS-05**: Developer can start Argus as a REST API sidecar (`argus serve`) that exposes a /tool-call endpoint
+- [x] **OPS-06**: The REST sidecar accepts tool call requests, runs the full security stack, and returns allow/block + audit entry — enabling non-Python agents to use Argus
 
 ## Future Requirements
 
@@ -97,8 +97,8 @@
 | OPS-02 | Phase 7 | Complete |
 | OPS-03 | Phase 7 | Complete |
 | OPS-04 | Phase 7 | Complete |
-| OPS-05 | Phase 8 | Pending |
-| OPS-06 | Phase 8 | Pending |
+| OPS-05 | Phase 8 | Complete |
+| OPS-06 | Phase 8 | Complete |
 
 **Coverage:**
 - v0.3.0 requirements: 24 total
