@@ -39,16 +39,18 @@ def run_command(
 
 async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
     """Wire and run the full Argus runtime stack."""
-    from argus.llm.config import load_config
+    import yaml
+    from argus.llm.config import load_config, load_gateway_config
     from argus.llm.tracker import SpendTracker
     from argus.llm.router import LLMRouter
     from argus.engine.machine import StateMachine
     from argus.engine.states import RunContext
-    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.gateway import SecurityGateway
     from argus.security.audit.logger import AuditLogger
     from argus.security.redactor.redactor import SecretRedactor
     from argus.memory.manager import MemoryManager, MemoryConfig
     from argus.observability.manager import ObservabilityManager, ObsConfig
+    from argus.observability.otel import build_security_otel_emitter
 
     # Create trace directory
     trace_dir.mkdir(parents=True, exist_ok=True)
@@ -62,7 +64,10 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
         )
     )
 
-    # Load config and build LLM stack
+    # Load raw YAML once for both model config and gateway config
+    with open(config) as f:
+        raw = yaml.safe_load(f) or {}
+
     model_config = load_config(config)
     tracker = SpendTracker(model_config.spend)
     router = LLMRouter(
@@ -76,8 +81,13 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
     daemon.start()
     try:
         audit_logger = AuditLogger(socket_path)
+        gateway_config = load_gateway_config(raw)
+        security_otel = None
+        if gateway_config.otel is not None:
+            security_otel = build_security_otel_emitter(gateway_config.otel)
         gateway = SecurityGateway(
-            config=GatewayConfig(), audit_logger=audit_logger, obs=obs
+            config=gateway_config, audit_logger=audit_logger, obs=obs,
+            security_otel=security_otel,
         )
 
         # Memory — scoped DB to this run's trace_dir
