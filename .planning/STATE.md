@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
-status: in_progress
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-03-27T18:13:39Z"
-last_activity: 2026-03-27 — 07-02 argus audit CLI with Rich panels, filters, streaming reader (OPS-01, OPS-02 GREEN)
+status: completed
+stopped_at: Completed 07-03-PLAN.md — Phase 7 fully complete (OPS-01..OPS-04)
+last_updated: "2026-03-27T18:15:07.266Z"
+last_activity: 2026-03-27 — 07-02 argus audit CLI with streaming reader, outcome-based panels, --type/--severity/--since/--until filters
 progress:
-  total_phases: 7
-  completed_phases: 6
+  total_phases: 6
+  completed_phases: 5
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 92
 ---
 
@@ -25,19 +25,18 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 
 ## Current Position
 
-Phase: 7 (Audit CLI + OTel Export) — IN PROGRESS
-Plan: 02 complete — argus audit CLI command with Rich panels, 4 filter flags (OPS-01, OPS-02 GREEN)
-Status: Phase 7 Plan 02 complete — Plan 03 remaining (OTel export wiring)
-Last activity: 2026-03-27 — 07-02 argus audit CLI with streaming reader, outcome-based panels, --type/--severity/--since/--until filters
+Phase: 7 (Audit CLI + OTel Export) — COMPLETE
+Plan: 03 complete — OTel config loading, violation span emission, SecurityGateway wiring (OPS-03, OPS-04 GREEN)
+Status: Phase 7 fully complete — all 13 plans complete, all 24 requirements shipped
+Last activity: 2026-03-27 — 07-03 OtelConfig, load_otel_config, emit_security_violation, SecurityGateway OTel wiring
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-- Phases complete: 6/6 (all phases 1-6 complete)
-- Plans complete: 12 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02, 06-01, 06-02, 06-03, 07-01, 07-02)
-- Requirements shipped: 22/24 (OPS-01 and OPS-02 shipped in 07-02; OPS-03 and OPS-04 pending GREEN in 07-03)
-- OPS-03 and OPS-04 RED contracts established in 07-01 (pending GREEN in 07-03)
+- Phases complete: 7/7 (all phases 1-7 complete)
+- Plans complete: 13 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02, 06-01, 06-02, 06-03, 07-01, 07-02, 07-03)
+- Requirements shipped: 24/24 (OPS-03 and OPS-04 shipped in 07-03 — all requirements complete)
 
 ## Accumulated Context
 
@@ -81,11 +80,14 @@ Progress: [█████████░] 92%
 | test_load_gateway_config_with_otel_builds_emitter is RED for three reasons | GatewayConfig.otel, build_security_otel_emitter, SecurityGateway.security_otel — all three must land in Plan 03 |
 | --since/--until accept relative duration strings only (30m, 1h, 2d) | No ISO-8601 per user decision; consistent with argus duration format convention |
 | prev_hash and event_id never rendered in audit panels | Chain integrity fields for internal use only — not exposed to CLI users |
+| Datadog/Grafana treated as OTLP aliases — single OTLPSpanExporter for all backends | Per user decision; simplifies implementation, no special-casing needed |
+| SecurityGateway security_otel is constructor-injected, not built internally | Separation of concerns; caller controls emitter lifecycle |
+| Egress gate does not emit violation spans in v1 | Egress is log-only (not a blocked outcome) — span emission only for blocked/denied calls |
 
 ## Session Continuity
 
 Next action: Execute Phase 7 Plan 03 — OTel config loading, violation spans, gateway wiring (OPS-03, OPS-04 GREEN)
-Stopped at: Completed 07-02-PLAN.md
+Stopped at: Completed 07-03-PLAN.md — Phase 7 fully complete (OPS-01..OPS-04)
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 

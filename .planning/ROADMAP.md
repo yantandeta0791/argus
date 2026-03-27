@@ -12,7 +12,7 @@
 - [x] **Phase 4: MCP Server Wrapper** — Wrap any MCP server so all tool invocations pass through the security stack (completed 2026-03-23)
 - [x] **Phase 5: Human-in-the-Loop Gates** — Terminal approval flow for high-risk tools, audit-logged decisions, configurable timeout (completed 2026-03-23)
 - [x] **Phase 6: Policy-as-Code** — Full declarative argus.yaml configuration for RBAC, secrets, egress, spend caps, and startup validation (completed 2026-03-27)
-- [ ] **Phase 7: Audit CLI + OTel Export** — `argus audit` command with filtering and push export of security events to Datadog/Grafana/OTLP
+- [x] **Phase 7: Audit CLI + OTel Export** — `argus audit` command with filtering and push export of security events to Datadog/Grafana/OTLP (completed 2026-03-27)
 - [ ] **Phase 8: REST API Sidecar** — `argus serve` exposes a /tool-call endpoint enabling non-Python agents to use Argus
 
 ---
@@ -91,7 +91,7 @@ Plans:
   2. Running `argus audit --filter` with type, severity, or time range flags returns only the matching events — all other events are hidden
   3. A developer can configure an OTel exporter endpoint (Datadog, Grafana, or OTLP) in argus.yaml and have security events pushed to that endpoint without code changes
   4. Permission denied, injection detected, and credential exposed events each emit an OTel span with structured attributes (event type, tool name, severity, agent role)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 07-01-PLAN.md — TDD RED: write failing test suites for all OPS-01 through OPS-04 behaviors
@@ -118,7 +118,7 @@ Plans:
 | 4. MCP Server Wrapper | 2/2 | Complete   | 2026-03-23 |
 | 5. Human-in-the-Loop Gates | 2/2 | Complete   | 2026-03-23 |
 | 6. Policy-as-Code | 3/3 | Complete   | 2026-03-27 |
-| 7. Audit CLI + OTel Export | 2/3 | In Progress|  |
+| 7. Audit CLI + OTel Export | 3/3 | Complete   | 2026-03-27 |
 | 8. REST API Sidecar | 0/? | Not started | - |
 
 ---
