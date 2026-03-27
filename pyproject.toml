@@ -44,6 +44,11 @@ autogen = [
 mcp = [
     "fastmcp>=2.9",
 ]
+rest = [
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+    "httpx>=0.24",
+]
 
 [project.scripts]
 argus = "argus.cli.main:app"

@@ -15,6 +15,7 @@ def _register() -> None:
     from argus.cli.scan import scan_command
     from argus.cli.demo import demo_command
     from argus.cli.audit import audit_command
+    from argus.cli.serve import serve_command
 
     # Register all commands directly so they work as first-class commands
     # (not groups), matching `argus run`, `argus scan <target>`, `argus demo`, `argus audit` patterns.
@@ -22,6 +23,7 @@ def _register() -> None:
     app.command(name="scan")(scan_command)
     app.command(name="demo")(demo_command)
     app.command(name="audit")(audit_command)
+    app.command(name="serve")(serve_command)
 
 
 _register()
