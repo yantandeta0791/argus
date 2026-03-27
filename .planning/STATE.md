@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
-status: completed
-stopped_at: Completed 06-01-PLAN.md (RED test suite for policy-as-code)
-last_updated: "2026-03-27T17:15:24.929Z"
-last_activity: 2026-03-23 — 05-02 HITL gate implementation (HITLGate, HITLConfig, ApprovalDeniedError, load_hitl_config, gateway Gate 1.5)
+status: executing
+stopped_at: Completed 06-02-PLAN.md (policy loader implementations)
+last_updated: "2026-03-27T17:19:26.784Z"
+last_activity: 2026-03-27 — 06-01 RED test suite for POLC-01 through POLC-05 + integration
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 10
-  completed_plans: 8
-  percent: 100
+  completed_plans: 9
+  percent: 80
 ---
 
 # State
@@ -74,11 +74,12 @@ Progress: [████████░░] 80%
 | HITL deny path re-raises without audit.send | Denied calls must not produce tool_call_pre audit entries; hitl_decision only logged on approve |
 | 06-01 RED test imports inside function bodies | Ensures ImportError at call time not collection time — matches existing test_config.py style |
 | ARGUS_SPEND_PROFILE env var for spend profiles | Consistent with Argus env var naming convention (ARGUS_ prefix) |
+| Phase 06-policy-as-code P02 | 15 | 2 tasks | 4 files |
 
 ## Session Continuity
 
 Next action: Execute Phase 6 (policy-as-code) — Phase 5 complete
-Stopped at: Completed 06-01-PLAN.md (RED test suite for policy-as-code)
+Stopped at: Completed 06-02-PLAN.md (policy loader implementations)
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 

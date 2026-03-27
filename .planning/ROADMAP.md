@@ -75,7 +75,7 @@ Plans:
   3. A developer can specify allowed domains and IPs under an egress section in argus.yaml and have those rules enforced without any code changes
   4. A developer can define named spend cap profiles (e.g. dev/staging/prod) and select the active profile via an environment variable or CLI flag at startup
   5. When argus.yaml contains invalid policy rules, startup fails with a specific, human-readable error message identifying the offending rule — no silent misconfiguration
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 06-01-PLAN.md — TDD RED: write failing test suites for all POLC-01 through POLC-05 behaviors
@@ -112,7 +112,7 @@ Plans:
 | 3. CrewAI + AutoGen Adapters | 3/3 | Complete    | 2026-03-23 |
 | 4. MCP Server Wrapper | 2/2 | Complete   | 2026-03-23 |
 | 5. Human-in-the-Loop Gates | 2/2 | Complete   | 2026-03-23 |
-| 6. Policy-as-Code | 1/3 | In Progress|  |
+| 6. Policy-as-Code | 2/3 | In Progress|  |
 | 7. Audit CLI + OTel Export | 0/? | Not started | - |
 | 8. REST API Sidecar | 0/? | Not started | - |
 
