@@ -33,8 +33,8 @@
 
 ### Operationalization
 
-- [ ] **OPS-01**: Developer can run `argus audit` to pretty-print the JSONL audit log with colored output and severity filtering
-- [ ] **OPS-02**: `argus audit --filter` accepts type, severity, and time range flags to query specific events
+- [x] **OPS-01**: Developer can run `argus audit` to pretty-print the JSONL audit log with colored output and severity filtering
+- [x] **OPS-02**: `argus audit --filter` accepts type, severity, and time range flags to query specific events
 - [ ] **OPS-03**: Developer can configure OTel exporters in argus.yaml to push security events to external systems (Datadog, Grafana, OTLP endpoint)
 - [ ] **OPS-04**: Security violations (permission denied, injection detected, credential exposed) emit OTel spans with structured attributes
 - [ ] **OPS-05**: Developer can start Argus as a REST API sidecar (`argus serve`) that exposes a /tool-call endpoint
@@ -93,8 +93,8 @@
 | POLC-03 | Phase 6 | Complete |
 | POLC-04 | Phase 6 | Complete |
 | POLC-05 | Phase 6 | Complete |
-| OPS-01 | Phase 7 | Pending |
-| OPS-02 | Phase 7 | Pending |
+| OPS-01 | Phase 7 | Complete |
+| OPS-02 | Phase 7 | Complete |
 | OPS-03 | Phase 7 | Pending |
 | OPS-04 | Phase 7 | Pending |
 | OPS-05 | Phase 8 | Pending |
