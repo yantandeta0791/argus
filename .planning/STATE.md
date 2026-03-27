@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-02-PLAN.md (policy loader implementations)
-last_updated: "2026-03-27T17:19:26.784Z"
+stopped_at: Completed 06-03-PLAN.md (load_gateway_config — Phase 6 complete)
+last_updated: "2026-03-27T17:21:47.511Z"
 last_activity: 2026-03-27 — 06-01 RED test suite for POLC-01 through POLC-05 + integration
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 10
-  completed_plans: 9
-  percent: 80
+  completed_plans: 10
+  percent: 100
 ---
 
 # State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Every tool call passes through deterministic enforcement code the LLM cannot influence.
-**Current focus:** v0.3.0 — Phase 5: Human-in-the-Loop Gates
+**Current focus:** v0.3.0 — Phase 6: Policy-as-Code (complete)
 
 ## Current Position
 
-Phase: 6 (Policy-as-Code)
-Plan: 01 complete — RED test suite (23 tests in test_config.py + 4 in test_permission.py)
-Status: Phase 6 in progress
-Last activity: 2026-03-27 — 06-01 RED test suite for POLC-01 through POLC-05 + integration
+Phase: 6 (Policy-as-Code) — COMPLETE
+Plan: 03 complete — load_gateway_config orchestrator, all POLC-01 through POLC-05 GREEN
+Status: Phase 6 complete — all 10 plans complete
+Last activity: 2026-03-27 — 06-03 load_gateway_config + Phase 6 POLC requirements satisfied
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-- Phases complete: 3/6 (phases 1-5; phase 6 in progress)
-- Plans complete: 8 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02, 06-01)
-- Requirements shipped: 15/24 (ADPT-01 through ADPT-08 shipped in phase 3-4; HITL-01 through HITL-05 shipped in 05-02)
+- Phases complete: 6/6 (all phases 1-6 complete)
+- Plans complete: 10 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02, 06-01, 06-02, 06-03)
+- Requirements shipped: 20/24 (ADPT-01 through ADPT-08 shipped in phase 3-4; HITL-01 through HITL-05 shipped in 05-02; POLC-01 through POLC-05 shipped in 06)
 
 ## Accumulated Context
 
@@ -74,12 +74,13 @@ Progress: [████████░░] 80%
 | HITL deny path re-raises without audit.send | Denied calls must not produce tool_call_pre audit entries; hitl_decision only logged on approve |
 | 06-01 RED test imports inside function bodies | Ensures ImportError at call time not collection time — matches existing test_config.py style |
 | ARGUS_SPEND_PROFILE env var for spend profiles | Consistent with Argus env var naming convention (ARGUS_ prefix) |
-| Phase 06-policy-as-code P02 | 15 | 2 tasks | 4 files |
+| load_gateway_config does not call load_spend_profiles | SpendConfig is a ModelConfig field, not a GatewayConfig field — spend config is separate concern |
+| GatewayConfig lazily imported inside load_gateway_config | Avoids circular imports between argus.llm and argus.security — same lazy import pattern as other section loaders |
 
 ## Session Continuity
 
-Next action: Execute Phase 6 (policy-as-code) — Phase 5 complete
-Stopped at: Completed 06-02-PLAN.md (policy loader implementations)
+Next action: Phase 6 complete — ready for /gsd:verify-work or proceed to Phase 7 (OTel)
+Stopped at: Completed 06-03-PLAN.md (load_gateway_config — Phase 6 complete)
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 
