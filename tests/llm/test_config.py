@@ -1,5 +1,7 @@
 """Tests for argus.llm.config -- load_config() and ModelConfig dataclasses."""
 
+import pytest
+
 
 def test_load_config_reads_yaml(tmp_argus_yaml):
     from argus.llm.config import load_config
