@@ -71,3 +71,36 @@ def test_file_span_exporter_creates_parent_dirs(tmp_path):
     exporter = FileSpanExporter(path=path)
     exporter.shutdown()
     assert path.exists()
+
+
+# ---------------------------------------------------------------------------
+# OPS-04: Security violation span emission
+# ---------------------------------------------------------------------------
+
+
+def test_emit_security_violation_span():
+    """OPS-04: emit_security_violation() emits an argus.security.violation span
+    with the correct attributes.
+
+    RED: OtelEmitter does not yet have emit_security_violation().
+    """
+    from argus.observability.otel import OtelEmitter
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    exporter = InMemorySpanExporter()
+    emitter = OtelEmitter(service_name="argus-test", exporter=exporter)
+    emitter.emit_security_violation(
+        event_type="permission",
+        tool_name="read_file",
+        severity="HIGH",
+        agent_role="analyst",
+    )
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    assert spans[0].name == "argus.security.violation"
+    assert spans[0].attributes["argus.security.event_type"] == "permission"
+    assert spans[0].attributes["argus.security.tool_name"] == "read_file"
+    assert spans[0].attributes["argus.security.severity"] == "HIGH"
+    assert spans[0].attributes["argus.security.agent_role"] == "analyst"

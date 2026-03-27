@@ -356,3 +356,47 @@ def test_gateway_audit_receives_hitl_decision_event():
     assert "hitl_decision" in event_types, (
         "Audit must record a hitl_decision event after approval"
     )
+
+
+# ---------------------------------------------------------------------------
+# OPS-04: Gateway OTel violation span emission
+# ---------------------------------------------------------------------------
+
+
+def test_gateway_emits_violation_on_permission_block():
+    """OPS-04: When permission is denied, SecurityGateway calls
+    security_otel.emit_security_violation() with the correct arguments.
+
+    RED: SecurityGateway does not yet accept a security_otel parameter.
+    """
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+    from argus.security.exceptions import PermissionDeniedError
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    mock_otel = MagicMock()
+
+    # Policy: analyst may NOT call secret_tool (no allow rule covers it)
+    config = GatewayConfig(
+        permissions={
+            "rules": [
+                {"role": "analyst", "tool": "read_file", "effect": "allow"},
+            ]
+        }
+    )
+
+    gateway = SecurityGateway(
+        config=config,
+        audit_logger=mock_audit,
+        security_otel=mock_otel,
+    )
+
+    with pytest.raises(PermissionDeniedError):
+        gateway.pre_tool_call("analyst", "secret_tool", {})
+
+    mock_otel.emit_security_violation.assert_called_once_with(
+        event_type="permission",
+        tool_name="secret_tool",
+        severity="HIGH",
+        agent_role="analyst",
+    )

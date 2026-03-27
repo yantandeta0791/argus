@@ -247,3 +247,92 @@ def test_load_gateway_config_empty_raw():
     assert result.prompt_shield_patterns == []
     assert result.egress_allowlist == []
     assert result.hitl is None
+
+
+# ---------------------------------------------------------------------------
+# OPS-03: OTel config loader tests (load_otel_config)
+# ---------------------------------------------------------------------------
+
+
+def test_load_otel_config_returns_none_when_absent():
+    """OPS-03: load_otel_config({}) returns None when otel section is absent."""
+    from argus.llm.config import load_otel_config
+
+    result = load_otel_config({})
+    assert result is None
+
+
+def test_load_otel_config_parses_endpoint_and_exporter():
+    """OPS-03: load_otel_config parses exporter and endpoint from otel section."""
+    from argus.llm.config import load_otel_config
+
+    raw = {"otel": {"exporter": "otlp", "endpoint": "http://localhost:4317"}}
+    result = load_otel_config(raw)
+    assert result.exporter == "otlp"
+    assert result.endpoint == "http://localhost:4317"
+
+
+def test_load_otel_config_substitutes_env_vars(monkeypatch):
+    """OPS-03: load_otel_config substitutes ${VAR} placeholders from environment."""
+    from argus.llm.config import load_otel_config
+
+    monkeypatch.setenv("DD_API_KEY", "test-key-123")
+    raw = {
+        "otel": {
+            "exporter": "datadog",
+            "endpoint": "http://dd:4317",
+            "headers": {"api-key": "${DD_API_KEY}"},
+        }
+    }
+    result = load_otel_config(raw)
+    assert result.headers["api-key"] == "test-key-123"
+
+
+def test_load_otel_config_defaults():
+    """OPS-03: load_otel_config with empty otel section uses safe defaults."""
+    from argus.llm.config import load_otel_config
+
+    result = load_otel_config({"otel": {}})
+    assert result.exporter == "otlp"
+    assert result.endpoint == "http://localhost:4317"
+    assert result.headers == {}
+
+
+# ---------------------------------------------------------------------------
+# OPS-03 + OPS-04: Config-to-gateway wiring test
+# ---------------------------------------------------------------------------
+
+
+def test_load_gateway_config_with_otel_builds_emitter():
+    """OPS-03 + OPS-04: Full config-to-gateway wiring: YAML otel section ->
+    load_gateway_config -> GatewayConfig.otel -> build_security_otel_emitter ->
+    SecurityGateway(security_otel=emitter).
+
+    This test is RED for three reasons:
+    (a) GatewayConfig has no otel field yet
+    (b) build_security_otel_emitter does not exist yet
+    (c) SecurityGateway does not accept security_otel parameter yet
+    """
+    from unittest.mock import MagicMock
+    from argus.llm.config import load_gateway_config
+    from argus.observability.otel import build_security_otel_emitter
+    from argus.security.gateway import SecurityGateway
+
+    raw = {
+        "otel": {"exporter": "otlp", "endpoint": "http://localhost:4317"},
+        "rbac": {"roles": {"analyst": {"allow": ["read_file"]}}},
+    }
+
+    config = load_gateway_config(raw)
+    assert config.otel is not None
+
+    emitter = build_security_otel_emitter(config.otel)
+    assert emitter is not None
+    assert hasattr(emitter, "emit_security_violation")
+
+    gateway = SecurityGateway(
+        config=config,
+        audit_logger=MagicMock(),
+        security_otel=emitter,
+    )
+    assert gateway._security_otel is emitter
