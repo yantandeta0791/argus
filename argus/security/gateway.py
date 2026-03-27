@@ -37,6 +37,7 @@ class GatewayConfig:
     prompt_shield_patterns: list[str] = field(default_factory=list)
     egress_allowlist: list[str] = field(default_factory=list)
     hitl: Optional[HITLConfig] = None
+    otel: Optional[Any] = None  # OtelConfig from argus/llm/config.py (lazy typed to avoid circular import)
 
 
 class SecurityGateway:
@@ -46,7 +47,11 @@ class SecurityGateway:
     """
 
     def __init__(
-        self, config: GatewayConfig, audit_logger: AuditLogger, obs: Any = None
+        self,
+        config: GatewayConfig,
+        audit_logger: AuditLogger,
+        obs: Any = None,
+        security_otel: Any = None,
     ):
         self._permission = PermissionEnforcer(config.permissions)
         self._shield = PromptShield(
@@ -55,6 +60,7 @@ class SecurityGateway:
         self._redactor = SecretRedactor()
         self._audit = audit_logger
         self._obs = obs
+        self._security_otel = security_otel  # OtelEmitter or None (OPS-04)
         # Store hitl config; HITLGate is instantiated lazily in pre_tool_call so
         # the module-level HITLGate reference remains patchable during tests.
         self._hitl_config = config.hitl
@@ -69,6 +75,28 @@ class SecurityGateway:
         self._egress = EgressChecker(
             allowlist=config.egress_allowlist,
             event_sink=_egress_sink,
+        )
+
+    def _emit_violation(self, gate: str, tool_name: str | None, agent_role: str | None) -> None:
+        """Emit OTel violation span if security OTel emitter is configured (OPS-04).
+
+        Only called on violation outcomes — allowed tool calls must NOT emit spans.
+        """
+        if not self._security_otel:
+            return
+        severity_map = {
+            "prompt_shield": "CRITICAL",
+            "permission": "HIGH",
+            "egress": "HIGH",
+            "redaction": "HIGH",
+            "hitl": "HIGH",
+        }
+        severity = severity_map.get(gate, "INFO")
+        self._security_otel.emit_security_violation(
+            event_type=gate,
+            tool_name=tool_name,
+            severity=severity,
+            agent_role=agent_role,
         )
 
     def pre_tool_call(
@@ -96,6 +124,7 @@ class SecurityGateway:
                     rule_triggered=getattr(exc, "rule", None),
                 )
                 self._obs.on_security_event(event)
+            self._emit_violation("permission", tool_name, agent_role)
             raise
 
         # Gate 1.5: HITL approval gate (runs only when configured)
@@ -124,6 +153,7 @@ class SecurityGateway:
                         "tool_input": tool_input,
                     }
                 )
+                self._emit_violation("hitl", tool_name, agent_role)
                 raise
 
         # Gate 2: Audit pre-call (hard stop — fail-closed)
@@ -164,10 +194,13 @@ class SecurityGateway:
                     rule_triggered=getattr(exc, "rule", None),
                 )
                 self._obs.on_security_event(event)
+            self._emit_violation("prompt_shield", "[post_tool_call]", None)
             raise
 
         # Gate 4: Secret/PII redaction (soft block — run continues with scrubbed data)
         clean_output = self._redactor.redact(tool_output)
+        if clean_output != tool_output:
+            self._emit_violation("redaction", None, None)
 
         # Gate 5: Egress allowlist check (log-only in v1)
         if skill_manifest is not None:
