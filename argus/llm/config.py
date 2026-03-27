@@ -70,6 +70,40 @@ def load_config(path: Path | str = "argus.yaml") -> ModelConfig:
     )
 
 
+@dataclass
+class OtelConfig:
+    """OTel OTLP exporter configuration. All exporter values use OTLP protocol."""
+
+    exporter: str = "otlp"  # otlp | datadog | grafana — all use OTLP protocol
+    endpoint: str = "http://localhost:4317"
+    headers: dict[str, str] = field(default_factory=dict)
+
+
+def load_otel_config(raw: dict):
+    """Parse otel: YAML section into OtelConfig.
+
+    Accepts the raw dict from yaml.safe_load(argus.yaml).
+    Substitutes ${ENV_VAR} placeholders in header values.
+    Returns OtelConfig if otel section present, None otherwise.
+
+    OtelConfig is a dataclass here (not lazy-imported) — no circular import risk.
+    OPS-03.
+    """
+    if "otel" not in raw:
+        return None
+    otel_raw = raw.get("otel") or {}
+    headers_raw = otel_raw.get("headers", {}) or {}
+    headers = {
+        k: re.sub(r"\$\{(\w+)\}", lambda m: os.environ.get(m.group(1), ""), str(v))
+        for k, v in headers_raw.items()
+    }
+    return OtelConfig(
+        exporter=otel_raw.get("exporter", "otlp"),
+        endpoint=otel_raw.get("endpoint", "http://localhost:4317"),
+        headers=headers,
+    )
+
+
 def load_hitl_config(raw: dict):
     """Parse tools: and hitl: YAML sections into HITLConfig.
 
@@ -204,10 +238,12 @@ def load_gateway_config(raw: dict):
     secrets = load_secrets_config(raw)
     egress = load_egress_config(raw)
     hitl = load_hitl_config(raw)
+    otel = load_otel_config(raw)
 
     return GatewayConfig(
         permissions=permissions,
         prompt_shield_patterns=secrets.patterns,
         egress_allowlist=egress,
         hitl=hitl,
+        otel=otel,
     )

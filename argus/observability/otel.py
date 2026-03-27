@@ -35,6 +35,12 @@ _ARGUS_STATE_TO = "argus.state.to"
 _ARGUS_RUN_ID = "argus.run_id"
 _ARGUS_STATE = "argus.state"
 
+# Security violation span attribute constants (OPS-04)
+_ARGUS_SECURITY_EVENT_TYPE = "argus.security.event_type"
+_ARGUS_SECURITY_TOOL = "argus.security.tool_name"
+_ARGUS_SECURITY_SEVERITY = "argus.security.severity"
+_ARGUS_SECURITY_AGENT_ROLE = "argus.security.agent_role"
+
 
 class FileSpanExporter(SpanExporter):
     """Writes each finished span as a compact JSON line to a .jsonl file.
@@ -111,6 +117,26 @@ class OtelEmitter:
             span.set_attribute(_ARGUS_STATE_TO, str(to_state))
             span.set_attribute(_ARGUS_RUN_ID, run_id)
 
+    def emit_security_violation(
+        self,
+        event_type: str,
+        tool_name: str | None,
+        severity: str,
+        agent_role: str | None,
+    ) -> None:
+        """Emit argus.security.violation span for a security enforcement event (OPS-04).
+
+        Fail-open: wrapped in try/except — OTel emission must never block security enforcement.
+        """
+        try:
+            with self._tracer.start_as_current_span("argus.security.violation") as span:
+                span.set_attribute(_ARGUS_SECURITY_EVENT_TYPE, event_type)
+                span.set_attribute(_ARGUS_SECURITY_TOOL, tool_name or "")
+                span.set_attribute(_ARGUS_SECURITY_SEVERITY, severity)
+                span.set_attribute(_ARGUS_SECURITY_AGENT_ROLE, agent_role or "")
+        except Exception:
+            pass  # Fail-open: OTel emission must never block security enforcement
+
     def flush(self) -> None:
         """Flush and shut down the provider. Call once at manager.flush() time."""
         try:
@@ -118,3 +144,18 @@ class OtelEmitter:
             self._provider.shutdown()
         except Exception:
             pass
+
+
+def build_security_otel_emitter(otel_config: "OtelConfig") -> "OtelEmitter":
+    """Build an OtelEmitter targeting an OTLP endpoint from OtelConfig (OPS-03/OPS-04).
+
+    Creates a gRPC OTLP exporter. Datadog, Grafana, and other backends that
+    support OTLP are treated as aliases — all use the same OTLPSpanExporter.
+    """
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
+    exporter = OTLPSpanExporter(
+        endpoint=otel_config.endpoint,
+        headers=tuple(otel_config.headers.items()),
+    )
+    return OtelEmitter(service_name="argus-security", exporter=exporter)
