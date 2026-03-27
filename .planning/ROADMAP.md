@@ -91,7 +91,7 @@ Plans:
   2. Running `argus audit --filter` with type, severity, or time range flags returns only the matching events — all other events are hidden
   3. A developer can configure an OTel exporter endpoint (Datadog, Grafana, or OTLP) in argus.yaml and have security events pushed to that endpoint without code changes
   4. Permission denied, injection detected, and credential exposed events each emit an OTel span with structured attributes (event type, tool name, severity, agent role)
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 07-01-PLAN.md — TDD RED: write failing test suites for all OPS-01 through OPS-04 behaviors
@@ -118,7 +118,7 @@ Plans:
 | 4. MCP Server Wrapper | 2/2 | Complete   | 2026-03-23 |
 | 5. Human-in-the-Loop Gates | 2/2 | Complete   | 2026-03-23 |
 | 6. Policy-as-Code | 3/3 | Complete   | 2026-03-27 |
-| 7. Audit CLI + OTel Export | 0/3 | In progress | - |
+| 7. Audit CLI + OTel Export | 1/3 | In Progress|  |
 | 8. REST API Sidecar | 0/? | Not started | - |
 
 ---

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
-status: completed
-stopped_at: Completed 06-03-PLAN.md (load_gateway_config — Phase 6 complete)
-last_updated: "2026-03-27T17:25:04.383Z"
-last_activity: 2026-03-27 — 06-03 load_gateway_config + Phase 6 POLC requirements satisfied
+status: in_progress
+stopped_at: "Completed 07-01-PLAN.md"
+last_updated: "2026-03-27T18:09:00.000Z"
+last_activity: 2026-03-27 — 07-01 RED test suites for OPS-01 through OPS-04
 progress:
-  total_phases: 6
-  completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_phases: 7
+  completed_phases: 6
+  total_plans: 13
+  completed_plans: 11
+  percent: 85
 ---
 
 # State
@@ -25,18 +25,19 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 
 ## Current Position
 
-Phase: 6 (Policy-as-Code) — COMPLETE
-Plan: 03 complete — load_gateway_config orchestrator, all POLC-01 through POLC-05 GREEN
-Status: Phase 6 complete — all 10 plans complete
-Last activity: 2026-03-27 — 06-03 load_gateway_config + Phase 6 POLC requirements satisfied
+Phase: 7 (Audit CLI + OTel Export) — IN PROGRESS
+Plan: 01 complete — RED test suites for OPS-01 through OPS-04 (17 tests across 4 files)
+Status: Phase 7 Plan 01 complete — Plans 02 and 03 remaining
+Last activity: 2026-03-27 — 07-01 RED test suites for argus audit CLI, OTel config, violation spans, gateway wiring
 
-Progress: [██████████] 100%
+Progress: [████████░░] 85%
 
 ## Performance Metrics
 
 - Phases complete: 6/6 (all phases 1-6 complete)
-- Plans complete: 10 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02, 06-01, 06-02, 06-03)
+- Plans complete: 11 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02, 06-01, 06-02, 06-03, 07-01)
 - Requirements shipped: 20/24 (ADPT-01 through ADPT-08 shipped in phase 3-4; HITL-01 through HITL-05 shipped in 05-02; POLC-01 through POLC-05 shipped in 06)
+- OPS-01 through OPS-04 RED contracts established in 07-01 (pending GREEN in 07-02, 07-03)
 
 ## Accumulated Context
 
@@ -76,11 +77,13 @@ Progress: [██████████] 100%
 | ARGUS_SPEND_PROFILE env var for spend profiles | Consistent with Argus env var naming convention (ARGUS_ prefix) |
 | load_gateway_config does not call load_spend_profiles | SpendConfig is a ModelConfig field, not a GatewayConfig field — spend config is separate concern |
 | GatewayConfig lazily imported inside load_gateway_config | Avoids circular imports between argus.llm and argus.security — same lazy import pattern as other section loaders |
+| Module-level import in test_audit.py (not function-body) | Forces collection-time RED for CLI tests — consistent with MCP test pattern; more immediate failure signal |
+| test_load_gateway_config_with_otel_builds_emitter is RED for three reasons | GatewayConfig.otel, build_security_otel_emitter, SecurityGateway.security_otel — all three must land in Plan 03 |
 
 ## Session Continuity
 
-Next action: Phase 6 complete — ready for /gsd:verify-work or proceed to Phase 7 (OTel)
-Stopped at: Completed 06-03-PLAN.md (load_gateway_config — Phase 6 complete)
+Next action: Execute Phase 7 Plan 02 — implement argus audit CLI and OTel config loading
+Stopped at: Completed 07-01-PLAN.md
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 
