@@ -30,6 +30,7 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio==0.24.0",
     "ruff>=0.4.0",
+    "httpx>=0.27",
 ]
 langchain = [
     "langchain-core>=1.2.5",
@@ -45,9 +46,8 @@ mcp = [
     "fastmcp>=2.9",
 ]
 rest = [
-    "fastapi>=0.100",
-    "uvicorn>=0.20",
-    "httpx>=0.24",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
 ]
 
 [project.scripts]
