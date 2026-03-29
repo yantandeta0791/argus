@@ -33,10 +33,17 @@ class SecretRedactor:
     Never raises — returns redacted text and run continues with scrubbed data.
     """
 
-    def __init__(self, event_sink: Callable | None = None):
+    def __init__(
+        self,
+        event_sink: Callable | None = None,
+        extra_patterns: list[str] | None = None,
+    ):
         self._patterns = [
             (re.compile(pattern), label) for pattern, label in SECRET_PATTERNS
         ]
+        # POLC-02: custom secret patterns from argus.yaml secrets.patterns
+        for i, pattern in enumerate(extra_patterns or []):
+            self._patterns.append((re.compile(pattern), f"custom_secret_{i}"))
         self._event_sink = event_sink  # optional: emit SecurityEvent per redaction
 
     def redact(self, text: str) -> str:

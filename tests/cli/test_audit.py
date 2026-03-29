@@ -205,3 +205,41 @@ def test_audit_filter_no_match_exits_zero(tmp_path):
     result = runner.invoke(app, ["audit", "--log", str(tmp_log), "--type", "egress"])
     assert result.exit_code == 0
     assert "No events match" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Dual-format support: gateway audit records (event_type-keyed)
+# ---------------------------------------------------------------------------
+
+
+def test_audit_normalizes_gateway_records(tmp_path):
+    """OPS-01: argus audit can render gateway audit.jsonl records (event_type-keyed)."""
+    from argus.cli.main import app
+
+    tmp_log = tmp_path / "audit.jsonl"
+    events = [
+        {"event_type": "tool_call_pre", "agent_role": "analyst", "tool_name": "read_file"},
+        {"event_type": "hitl_decision", "approved": False, "tool_name": "delete_db", "tool_input": {}},
+    ]
+    _write_jsonl(tmp_log, events)
+
+    result = runner.invoke(app, ["audit", "--log", str(tmp_log)])
+    assert result.exit_code == 0
+    assert "read_file" in result.output
+    assert "delete_db" in result.output
+
+
+def test_audit_filter_type_on_gateway_records(tmp_path):
+    """OPS-02: --type filter works on normalized gateway records."""
+    from argus.cli.main import app
+
+    tmp_log = tmp_path / "audit.jsonl"
+    events = [
+        {"event_type": "tool_call_pre", "agent_role": "analyst", "tool_name": "read_file"},
+        {"event_type": "hitl_decision", "approved": False, "tool_name": "delete_db", "tool_input": {}},
+    ]
+    _write_jsonl(tmp_log, events)
+
+    result = runner.invoke(app, ["audit", "--log", str(tmp_log), "--type", "hitl"])
+    assert "delete_db" in result.output
+    assert "read_file" not in result.output

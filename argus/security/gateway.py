@@ -57,7 +57,9 @@ class SecurityGateway:
         self._shield = PromptShield(
             extra_patterns=config.prompt_shield_patterns or None
         )
-        self._redactor = SecretRedactor()
+        self._redactor = SecretRedactor(
+            extra_patterns=config.prompt_shield_patterns or None,
+        )
         self._audit = audit_logger
         self._obs = obs
         self._security_otel = security_otel  # OtelEmitter or None (OPS-04)

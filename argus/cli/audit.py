@@ -71,6 +71,24 @@ _HIGH_SEVERITY_PAIRS: set[tuple[str, str]] = {
 }
 
 
+def _normalize_event(event: dict) -> dict:
+    """Normalize gateway audit records (event_type-keyed) to SecurityEvent shape (gate/outcome).
+
+    If the event already has a 'gate' key, return as-is.  Otherwise, map event_type
+    to gate/outcome so that both audit.jsonl and security.jsonl records render correctly.
+    """
+    if "gate" in event:
+        return event
+    event_type = event.get("event_type", "")
+    mapping = {
+        "tool_call_pre": ("audit", "allowed"),
+        "tool_call_post": ("audit", "allowed"),
+        "hitl_decision": ("hitl", "allowed" if event.get("approved") else "blocked"),
+    }
+    gate, outcome = mapping.get(event_type, (event_type, "unknown"))
+    return {**event, "gate": gate, "outcome": outcome}
+
+
 def _derive_severity(event: dict) -> str:
     """Derive a severity label from gate + outcome.
 
@@ -191,7 +209,7 @@ def _render_event(event: dict) -> None:
 
 def audit_command(
     log: Path = typer.Option(
-        Path("./runs/audit.jsonl"),
+        Path("./runs/security.jsonl"),
         help="Path to JSONL audit log file.",
     ),
     type: Optional[str] = typer.Option(  # noqa: A002
@@ -230,7 +248,8 @@ def audit_command(
         until_dt = _parse_duration(until)
 
     matched_count = 0
-    for event in _iter_events(log):
+    for raw_event in _iter_events(log):
+        event = _normalize_event(raw_event)
         if _matches_filters(event, type, severity, since_dt, until_dt):
             _render_event(event)
             matched_count += 1
