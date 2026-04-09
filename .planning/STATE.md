@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Multi-Agent + Anomaly Detection
-status: planning
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-04-09T23:17:29.566Z"
-last_activity: 2026-04-08 — v0.4 roadmap created
+status: executing
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-04-09T23:23:52.879Z"
+last_activity: 2026-04-09 — Phase 09 Plan 01 (identity infrastructure) complete
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 33
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 ## Current Position
 
 Phase: 09-multi-agent-enforcement
-Plan: 1/3 complete
-Status: In Progress — 09-01 complete, 09-02 next
-Last activity: 2026-04-09 — Phase 09 Plan 01 (identity infrastructure) complete
+Plan: 2/3 complete
+Status: In Progress — 09-02 complete, 09-03 next
+Last activity: 2026-04-09 — Phase 09 Plan 02 (Gate 0.5 identity enforcement) complete
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -100,11 +100,14 @@ Progress: [███░░░░░░░] 33%
 | AgentRegistry uses permissive fallback | Unknown caller_id returns adapter-supplied role — prevents single-agent breakage when no agents: section configured |
 | GatewayConfig.agents lazily typed as Optional[Any] | Same pattern as otel field — avoids circular import between argus.llm and argus.security |
 | SecurityEvent caller_id/hop_depth default to None/0 | All existing SecurityEvent construction remains backward compatible |
+| Phase 09-multi-agent-enforcement P02 | 7 | 1 tasks | 6 files |
+| pre_tool_call uses keyword-only params (* separator) — hop_depth=None sentinel for ContextVar fallback | Prevents positional call breakage; None vs 0 distinction allows correct fallback to ContextVar when caller does not pass hop_depth |
+| severity_map extended with identity:HIGH; _emit_violation carries caller_id/hop_depth through all gates | DelegationDepthError treated equally to permission denial; all violation spans carry full identity context |
 
 ## Session Continuity
 
-Next action: Execute 09-02 — Gate 0.5 identity check in SecurityGateway
-Stopped at: Completed 09-01-PLAN.md
+Next action: Execute 09-03 — LangGraph adapter wrap_tools with set_caller_context
+Stopped at: Completed 09-02-PLAN.md
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 
