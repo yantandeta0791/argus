@@ -150,3 +150,113 @@ def test_approval_denied_propagates_from_langchain_invoke():
 
     # The underlying tool must NOT have been called after denial
     tool.invoke.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Phase 9 Plan 03: ContextVar propagation — MAGNT-01
+# ---------------------------------------------------------------------------
+
+
+def test_wrap_tools_with_caller_id_stores_identity():
+    """wrap_tools with caller_id/hop_depth stores them on each wrapper."""
+    tools = [_make_tool(name="tool_a"), _make_tool(name="tool_b")]
+    gw = _make_gateway()
+
+    wrapped = wrap_tools(tools, gateway=gw, agent_role="supervisor", caller_id="agent_a", hop_depth=1)
+
+    assert len(wrapped) == 2
+    assert all(w._caller_id == "agent_a" for w in wrapped)
+    assert all(w._hop_depth == 1 for w in wrapped)
+
+
+def test_wrap_tools_without_caller_id_defaults():
+    """wrap_tools without caller_id/hop_depth defaults to None/0 (backward compat)."""
+    tools = [_make_tool()]
+    gw = _make_gateway()
+
+    wrapped = wrap_tools(tools, gateway=gw, agent_role="agent")
+
+    assert wrapped[0]._caller_id is None
+    assert wrapped[0]._hop_depth == 0
+
+
+def test_invoke_sets_caller_context_before_pre_tool_call():
+    """When caller_id set, ContextVars are active during pre_tool_call."""
+    from argus.security.identity import get_caller_context
+
+    tool = _make_tool()
+    gw = _make_gateway()
+
+    captured: list = []
+
+    def capture_context(*args, **kwargs):
+        captured.append(get_caller_context())
+        return {}
+
+    gw.pre_tool_call.side_effect = capture_context
+
+    wrapper = ArgusToolWrapper(tool=tool, gateway=gw, agent_role="supervisor", caller_id="agent_x", hop_depth=2)
+    wrapper.invoke({"q": "test"})
+
+    assert len(captured) == 1
+    assert captured[0] == ("agent_x", 2)
+
+
+def test_invoke_resets_caller_context_after_return():
+    """ContextVars are reset to previous values after invoke() returns."""
+    from argus.security.identity import get_caller_context, set_caller_context, reset_caller_context
+
+    tool = _make_tool()
+    gw = _make_gateway()
+
+    # Set an outer context
+    outer_tokens = set_caller_context("outer_agent", 0)
+    try:
+        wrapper = ArgusToolWrapper(tool=tool, gateway=gw, agent_role="worker", caller_id="inner_agent", hop_depth=1)
+        wrapper.invoke({"q": "x"})
+
+        # After invoke, context should be restored to outer values
+        ctx = get_caller_context()
+        assert ctx == ("outer_agent", 0)
+    finally:
+        reset_caller_context(outer_tokens)
+
+
+def test_invoke_resets_caller_context_after_exception():
+    """ContextVars are reset even when the tool raises an exception."""
+    from argus.security.identity import get_caller_context, set_caller_context, reset_caller_context
+    from argus.security.exceptions import PermissionDeniedError
+
+    tool = _make_tool()
+    gw = _make_gateway()
+    gw.pre_tool_call.side_effect = PermissionDeniedError(
+        gate="permission", blocked="tool", rule="deny"
+    )
+
+    outer_tokens = set_caller_context("outer_agent", 0)
+    try:
+        wrapper = ArgusToolWrapper(tool=tool, gateway=gw, agent_role="worker", caller_id="inner_agent", hop_depth=1)
+        with pytest.raises(PermissionDeniedError):
+            wrapper.invoke({"q": "x"})
+
+        # Context must be restored despite the exception
+        assert get_caller_context() == ("outer_agent", 0)
+    finally:
+        reset_caller_context(outer_tokens)
+
+
+def test_invoke_no_caller_id_does_not_set_context():
+    """When caller_id is None, ContextVars are not modified."""
+    from argus.security.identity import get_caller_context
+
+    tool = _make_tool()
+    gw = _make_gateway()
+
+    # ContextVar starts at default (None, 0)
+    assert get_caller_context() == (None, 0)
+
+    wrapper = ArgusToolWrapper(tool=tool, gateway=gw, agent_role="agent")
+    wrapper.invoke({"q": "test"})
+
+    # ContextVar still at default after invoke
+    assert get_caller_context() == (None, 0)

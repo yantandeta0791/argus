@@ -47,10 +47,14 @@ class ArgusCrewAIToolWrapper:
         tool: Any,
         gateway: SecurityGateway,
         agent_role: str = "default",
+        caller_id: str | None = None,
+        hop_depth: int = 0,
     ) -> None:
         self._tool = tool
         self._gateway = gateway
         self._agent_role = agent_role
+        self._caller_id = caller_id
+        self._hop_depth = hop_depth
         self.name = tool.name
 
     def run(self, *args: Any, **kwargs: Any) -> str:
@@ -67,16 +71,30 @@ class ArgusCrewAIToolWrapper:
         else:
             tool_input = {}
 
-        # Pre-tool security gates (permission check, audit)
-        self._gateway.pre_tool_call(self._agent_role, self.name, tool_input)
+        # Set caller context ContextVars at the boundary if caller identity is known.
+        # Lazy import to avoid import-time dependency on identity module.
+        tokens = None
+        if self._caller_id is not None:
+            from argus.security.identity import reset_caller_context, set_caller_context
 
-        # Execute the actual tool (pass original args/kwargs unchanged
-        # so CrewAI's Pydantic validation runs on the real input)
-        raw_output = self._tool.run(*args, **kwargs)
-        output_str = str(raw_output) if not isinstance(raw_output, str) else raw_output
+            tokens = set_caller_context(self._caller_id, self._hop_depth)
 
-        # Post-tool security gates (injection scan, redaction, egress, audit)
-        clean_output = self._gateway.post_tool_call(output_str)
+        try:
+            # Pre-tool security gates (permission check, audit)
+            self._gateway.pre_tool_call(self._agent_role, self.name, tool_input)
+
+            # Execute the actual tool (pass original args/kwargs unchanged
+            # so CrewAI's Pydantic validation runs on the real input)
+            raw_output = self._tool.run(*args, **kwargs)
+            output_str = str(raw_output) if not isinstance(raw_output, str) else raw_output
+
+            # Post-tool security gates (injection scan, redaction, egress, audit)
+            clean_output = self._gateway.post_tool_call(output_str)
+        finally:
+            if tokens is not None:
+                from argus.security.identity import reset_caller_context
+
+                reset_caller_context(tokens)
 
         return clean_output
 
@@ -89,6 +107,8 @@ def wrap_tools(
     tools: list[Any],
     gateway: SecurityGateway,
     agent_role: str = "default",
+    caller_id: str | None = None,
+    hop_depth: int = 0,
 ) -> list[ArgusCrewAIToolWrapper]:
     """Wrap a list of CrewAI tools with Argus security enforcement.
 
@@ -96,11 +116,21 @@ def wrap_tools(
         tools: List of CrewAI BaseTool instances (or duck-typed equivalents).
         gateway: Configured SecurityGateway instance.
         agent_role: Role identifier for permission enforcement.
+        caller_id: Optional calling agent identity for multi-agent enforcement.
+            When set, ContextVars are set at each run() boundary and reset
+            in a finally block (no identity leaks between calls).
+        hop_depth: Delegation depth from the root supervisor (default 0 = direct).
 
     Returns:
         List of ArgusCrewAIToolWrapper instances (drop-in replacements).
     """
     return [
-        ArgusCrewAIToolWrapper(tool=t, gateway=gateway, agent_role=agent_role)
+        ArgusCrewAIToolWrapper(
+            tool=t,
+            gateway=gateway,
+            agent_role=agent_role,
+            caller_id=caller_id,
+            hop_depth=hop_depth,
+        )
         for t in tools
     ]
