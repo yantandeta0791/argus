@@ -1,9 +1,10 @@
 # Requirements: Argus
 
 **Defined:** 2026-03-15
+**Updated:** 2026-04-09
 **Core Value:** Every tool call passes through deterministic enforcement code the LLM cannot influence.
 
-## v0.3.0 Requirements
+## v0.3 Requirements (Complete)
 
 ### Framework Adapters
 
@@ -40,23 +41,41 @@
 - [x] **OPS-05**: Developer can start Argus as a REST API sidecar (`argus serve`) that exposes a /tool-call endpoint
 - [x] **OPS-06**: The REST sidecar accepts tool call requests, runs the full security stack, and returns allow/block + audit entry — enabling non-Python agents to use Argus
 
-## Future Requirements
+## v0.4 Requirements
 
 ### Multi-Agent Enforcement
 
-- **MAGNT-01**: Agent-to-agent calls are enforced by SecurityGateway the same as tool calls
-- **MAGNT-02**: Each agent in a multi-agent system has its own declared role and permission scope
-- **MAGNT-03**: Cross-agent permission escalation attempts are blocked and logged
+- [x] **MAGNT-01**: Developer can propagate caller identity (`caller_id` + `hop_depth`) through SecurityGateway on every agent-to-agent tool call
+- [x] **MAGNT-02**: Each agent in a multi-agent system has its own declared role and permission scope in argus.yaml
+- [ ] **MAGNT-03**: Audit log entries include `caller_id` and `hop_depth` for every tool call in a delegation chain
+- [ ] **MAGNT-04**: OTel violation spans include `argus.security.caller_id` and `argus.security.hop_depth` attributes
+- [x] **MAGNT-05**: Developer can set `max_delegation_depth` in argus.yaml — exceeding it raises `DelegationDepthError` (fail-closed)
+- [ ] **MAGNT-06**: CrewAI and LangChain adapters propagate agent identity via `contextvars` in supervisor/worker patterns
+- [ ] **MAGNT-07**: HITL banner for sub-agent tool calls shows originating supervisor and hop depth
 
 ### Anomaly Detection
 
-- **ANOM-01**: Argus detects and flags unusual tool call frequency patterns (e.g. 50 calls in 10 seconds)
-- **ANOM-02**: Argus detects and flags sudden egress spikes across sessions
-- **ANOM-03**: Anomaly thresholds are configurable in argus.yaml
+- [ ] **ANOM-01**: Argus tracks tool call frequency per agent role via sliding window and detects spikes using EWMA baseline + z-score
+- [ ] **ANOM-02**: Argus tracks egress volume per agent role and detects sudden spikes above the EWMA baseline
+- [ ] **ANOM-03**: When an anomaly is detected, Argus escalates to HITL gate with context banner showing rate, baseline, z-score, and last N tool calls
+- [ ] **ANOM-04**: Anomaly events are written to audit log and emitted as OTel spans (`GateType.ANOMALY`)
+- [ ] **ANOM-05**: Developer can configure anomaly thresholds in argus.yaml (`anomaly:` section — `window_seconds`, `z_threshold`, `min_observations`, `enabled`)
+- [ ] **ANOM-06**: Graduated response levels (configurable `warn_z` / `escalate_z` / `block_z` thresholds) reduce HITL fatigue for moderate anomalies
+
+## Future Requirements (v0.5+)
 
 ### LlamaIndex Adapter
 
 - **ADPT-08**: Developer can wrap LlamaIndex tools with SecurityGateway
+
+### Anomaly Detection Extensions
+
+- **ANOM-07**: Tool sequence / Markov anomaly detection for unusual tool combinations
+- **ANOM-08**: Anomaly baseline persistence to SQLite across restarts
+
+### Multi-Agent Extensions
+
+- **MAGNT-08**: AutoGen + MCP adapter contextvars propagation
 
 ### Webhook Approval
 
@@ -66,11 +85,14 @@
 
 | Feature | Reason |
 |---------|--------|
-| GUI dashboard / SaaS | Premature — CLI + REST API is sufficient for v0.3.0 |
+| GUI dashboard / SaaS | Premature — CLI + REST API is sufficient |
 | Model fine-tuning / alignment | Out of domain — Argus is runtime enforcement only |
-| Risk-score auto-detection for HITL | Deferred — config-based is simpler and more predictable for v0.3.0 |
-| LlamaIndex adapter | Deferred to v0.4.0 — lower risk profile than autonomous agent frameworks |
-| Multi-agent enforcement | Deferred to v0.4.0 — requires deeper architecture work |
+| Cryptographic delegation tokens (AIP/IBCT) | Requires key infrastructure Argus doesn't have |
+| LLM-mediated anomaly classification | Violates core principle: deterministic enforcement only |
+| Adaptive baseline that auto-incorporates anomalies | Normalization-of-deviance risk; baseline updates require HITL approval |
+| Fleet-level anomaly detection | Requires shared state store (Redis), changes deployment model |
+| Token consumption as anomaly metric | Not available in REST sidecar mode; tool frequency + egress are universal |
+| Full agent graph topology enforcement | Requires deep framework coupling; role + caller_id enforcement is equivalent |
 
 ## Traceability
 
@@ -99,12 +121,26 @@
 | OPS-04 | Phase 7 | Complete |
 | OPS-05 | Phase 8 | Complete |
 | OPS-06 | Phase 8 | Complete |
+| MAGNT-01 | Phase 9 | Complete |
+| MAGNT-02 | Phase 9 | Complete |
+| MAGNT-03 | Phase 9 | Pending |
+| MAGNT-04 | Phase 9 | Pending |
+| MAGNT-05 | Phase 9 | Complete |
+| MAGNT-06 | Phase 9 | Pending |
+| MAGNT-07 | Phase 9 | Pending |
+| ANOM-01 | Phase 10 | Pending |
+| ANOM-02 | Phase 10 | Pending |
+| ANOM-03 | Phase 10 | Pending |
+| ANOM-04 | Phase 10 | Pending |
+| ANOM-05 | Phase 10 | Pending |
+| ANOM-06 | Phase 10 | Pending |
 
 **Coverage:**
-- v0.3.0 requirements: 24 total
-- Mapped to phases: 24
-- Unmapped: 0 ✓
+- v0.3 requirements: 24 total (24 complete)
+- v0.4 requirements: 13 total
+- Mapped to phases: 13 (Phase 9: 7, Phase 10: 6) ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 — traceability finalized after roadmap creation*
+*Last updated: 2026-04-08 after v0.4 roadmap creation*

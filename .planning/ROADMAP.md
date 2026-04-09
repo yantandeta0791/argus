@@ -45,7 +45,7 @@
   3. Each agent declared in `agents:` in argus.yaml gets its own role and permission scope; a worker agent calling a tool allowed only for supervisors is denied
   4. A supervisor→worker tool call made via the CrewAI or LangChain adapter propagates agent identity automatically via `contextvars` without the developer manually threading `caller_id`
   5. The HITL terminal banner for a sub-agent tool call shows the originating supervisor name and current hop depth alongside the tool arguments
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 09-01-PLAN.md — Identity infrastructure: ContextVars, AgentRegistry, DelegationDepthError, config parser
@@ -76,7 +76,7 @@ Plans:
 | 6. Policy-as-Code | v0.3 | 3/3 | Complete | 2026-03-27 |
 | 7. Audit CLI + OTel Export | v0.3 | 3/3 | Complete | 2026-03-27 |
 | 8. REST API Sidecar | v0.3 | 2/2 | Complete | 2026-03-27 |
-| 9. Multi-Agent Enforcement | v0.4 | 0/3 | Planned | — |
+| 9. Multi-Agent Enforcement | 1/3 | In Progress|  | — |
 | 10. Anomaly Detection | v0.4 | 0/? | Not started | — |
 
 ---

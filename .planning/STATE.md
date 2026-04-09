@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Multi-Agent + Anomaly Detection
-status: defining_requirements
-stopped_at: v0.4 milestone started
-last_updated: "2026-04-08T00:00:00Z"
-last_activity: 2026-04-08 — Milestone v0.4 started (Multi-Agent + Anomaly Detection)
+status: planning
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-04-09T23:17:29.566Z"
+last_activity: 2026-04-08 — v0.4 roadmap created
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
 ---
 
 # State
@@ -21,22 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Every tool call passes through deterministic enforcement code the LLM cannot influence.
-**Current focus:** v0.4 Multi-Agent + Anomaly Detection — defining requirements
+**Current focus:** v0.4 Multi-Agent + Anomaly Detection — roadmap ready, phase planning next
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-08 — Milestone v0.4 started
+Phase: 09-multi-agent-enforcement
+Plan: 1/3 complete
+Status: In Progress — 09-01 complete, 09-02 next
+Last activity: 2026-04-09 — Phase 09 Plan 01 (identity infrastructure) complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
-- Phases complete: 7/7 (all phases 1-7 complete)
-- Plans complete: 13 (03-01, 03-02, 03-03, 04-01, 04-02, 05-01, 05-02, 06-01, 06-02, 06-03, 07-01, 07-02, 07-03)
-- Requirements shipped: 24/24 (OPS-03 and OPS-04 shipped in 07-03 — all requirements complete)
+- Phases complete (v0.4): 0/2
+- Plans complete (v0.4): 0 (TBD during phase planning)
+- Requirements mapped: 13/13
+- v0.3 requirements shipped: 24/24 (all complete)
 
 ## Accumulated Context
 
@@ -48,6 +49,13 @@ Progress: [░░░░░░░░░░] 0%
 - Policy-as-code goal: zero Python Casbin config required for standard RBAC setups
 - `argus audit` must be fast on large JSONL files — streaming read, not load-all
 - REST sidecar enables non-Python agents (JS, Go, etc.) to use Argus without binding
+- v0.4: Zero new core dependencies — contextvars (stdlib), deque+statistics (stdlib), OTel baggage (already in dep tree)
+- v0.4: LangGraph is the only new optional extra (`argus[langgraph]`) using `ToolNode(wrap_tool_call=...)`
+- v0.4: `agent_role` must be bound at `wrap_tools()` construction time, not passed dynamically — prevents privilege escalation via REST sidecar
+- v0.4: Anomaly detector cold-start: warmup_calls / min_observations (default 10) must suppress escalation before baseline is established
+- v0.4: REST sidecar single-worker enforcement required when anomaly detection enabled (multi-worker splits state)
+- v0.4: Gate order — Gate 0.5 (Identity) → Gate 1 (Permission) → Gate 1.5 (HITL) → Gate 1.75 (Anomaly) → Gate 2 (Audit pre) → [execute] → Gate 3 (Injection) → Gate 4 (Redaction) → Gate 5.5 (Egress record) → Gate 5 (Egress) → Gate 6 (Audit post)
+- v0.4: Phase 9 strictly before Phase 10 — AnomalyDetector uses `agent_id` from identity registry built in Phase 9
 
 ## Key Decisions
 
@@ -58,6 +66,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 6 after Phase 5 | Policy-as-code subsumes HITL config — better to have HITL working first |
 | Phase 7 after Phase 6 | OTel export config lives in argus.yaml — POLC must land first |
 | Phase 8 last | REST sidecar wraps the full stack — needs everything else stable |
+| Phase 9 before Phase 10 | AnomalyDetector uses agent_id for per-agent window attribution — requires identity infrastructure from Phase 9; Gate 1.75 follows Gate 0.5 in the same call |
 | CrewAI tests use .run() not .invoke() | CrewAI BaseTool API differs from LangChain — different method name |
 | AutoGen tests patch sys.modules with stub FunctionTool | Avoids autogen_core install; stub exposes inner async func for gateway gate testing |
 | CrewAI adapter intercepts run() not _run() | public boundary prevents framework bypass; _run() would be called directly by framework |
@@ -87,14 +96,19 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 08-rest-api-sidecar P02 | 15 | 2 tasks | 2 files |
 | isinstance(hitl_config, HITLConfig) guard in /tool-call | MagicMock auto-creates _hitl_config as truthy mock; isinstance prevents false HITL 503 for non-HITL gateways in tests |
 | Pydantic models at module level not inside build_app | FastAPI annotation resolver fails for locally-scoped Pydantic models; all requests returned 422 until moved to module scope |
+| Phase 09 P01 | 175 | 2 tasks | 7 files |
+| AgentRegistry uses permissive fallback | Unknown caller_id returns adapter-supplied role — prevents single-agent breakage when no agents: section configured |
+| GatewayConfig.agents lazily typed as Optional[Any] | Same pattern as otel field — avoids circular import between argus.llm and argus.security |
+| SecurityEvent caller_id/hop_depth default to None/0 | All existing SecurityEvent construction remains backward compatible |
 
 ## Session Continuity
 
-Next action: Execute Phase 7 Plan 03 — OTel config loading, violation spans, gateway wiring (OPS-03, OPS-04 GREEN)
-Stopped at: Completed 08-02-PLAN.md
+Next action: Execute 09-02 — Gate 0.5 identity check in SecurityGateway
+Stopped at: Completed 09-01-PLAN.md
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 
 ---
 *State initialized: 2026-03-15*
-*Milestone: v0.3.0*
+*Milestone: v0.4*
+*Last updated: 2026-04-08 after v0.4 roadmap creation*
