@@ -22,6 +22,7 @@ class GateType(str, Enum):
     EGRESS = "egress"
     SKILL_LIFECYCLE = "skill_lifecycle"
     HITL = "hitl"
+    IDENTITY = "identity"
 
 
 class SecurityEvent(BaseModel):
@@ -34,3 +35,5 @@ class SecurityEvent(BaseModel):
     rule_triggered: str | None = None
     blocked_value: str | None = None  # truncated; never full secret value
     metadata: dict[str, Any] = Field(default_factory=dict)
+    caller_id: str | None = None  # multi-agent: identity of the calling agent (MAGNT-01)
+    hop_depth: int = 0  # multi-agent: delegation chain depth (MAGNT-02)

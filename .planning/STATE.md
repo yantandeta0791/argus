@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.3
-milestone_name: milestone
-status: completed
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-03-27T20:47:37.868Z"
-last_activity: 2026-03-27 — 07-03 OtelConfig, load_otel_config, emit_security_violation, SecurityGateway OTel wiring
+milestone: v0.4
+milestone_name: Multi-Agent + Anomaly Detection
+status: defining_requirements
+stopped_at: v0.4 milestone started
+last_updated: "2026-04-08T00:00:00Z"
+last_activity: 2026-04-08 — Milestone v0.4 started (Multi-Agent + Anomaly Detection)
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-15)
+See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Every tool call passes through deterministic enforcement code the LLM cannot influence.
-**Current focus:** v0.3.0 — Phase 6: Policy-as-Code (complete)
+**Current focus:** v0.4 Multi-Agent + Anomaly Detection — defining requirements
 
 ## Current Position
 
-Phase: 8 (REST API Sidecar) — COMPLETE
-Plan: 02 complete — Full REST sidecar, /tool-call endpoint, HITL guard, argus serve CLI (OPS-05, OPS-06 GREEN)
-Status: Phase 8 fully complete — all 15 plans complete, all requirements shipped
-Last activity: 2026-03-27 — 08-02 FastAPI sidecar, build_app() testable seam, serve_command, 10 tests GREEN
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-08 — Milestone v0.4 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

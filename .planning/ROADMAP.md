@@ -1,130 +1,83 @@
-# Roadmap: Argus v0.3.0
+# Roadmap: Argus
 
-**Milestone:** v0.3.0 — Framework Adapters, HITL Gates, Policy-as-Code, Operationalization
-**Granularity:** Standard
-**Coverage:** 24/24 requirements mapped
+## Milestones
 
----
+- ✅ **v0.2.0 Security Foundation + LangChain** — Phases 1–2 (shipped 2026-03-08)
+- ✅ **v0.3 Framework Adapters + Operationalization** — Phases 3–8 (shipped 2026-03-28)
+- 📋 **v0.4 Multi-Agent + Anomaly Detection** — Phases 9–10 (planned)
 
 ## Phases
 
-- [x] **Phase 3: CrewAI + AutoGen Adapters** — Extend SecurityGateway to CrewAI and AutoGen with full enforcement parity and fail-closed guarantees (completed 2026-03-23)
-- [x] **Phase 4: MCP Server Wrapper** — Wrap any MCP server so all tool invocations pass through the security stack (completed 2026-03-23)
-- [x] **Phase 5: Human-in-the-Loop Gates** — Terminal approval flow for high-risk tools, audit-logged decisions, configurable timeout (completed 2026-03-23)
-- [x] **Phase 6: Policy-as-Code** — Full declarative argus.yaml configuration for RBAC, secrets, egress, spend caps, and startup validation (completed 2026-03-27)
-- [x] **Phase 7: Audit CLI + OTel Export** — `argus audit` command with filtering and push export of security events to Datadog/Grafana/OTLP (completed 2026-03-27)
-- [x] **Phase 8: REST API Sidecar** — `argus serve` exposes a /tool-call endpoint enabling non-Python agents to use Argus (completed 2026-03-27)
+<details>
+<summary>✅ v0.2.0 Security Foundation + LangChain (Phases 1–2) — SHIPPED 2026-03-08</summary>
 
----
+- [x] Phase 1: Security Core (bootstrapped outside GSD) — completed 2026-03-08
+- [x] Phase 2: LangChain Adapter (bootstrapped outside GSD) — completed 2026-03-08
+
+</details>
+
+<details>
+<summary>✅ v0.3 Framework Adapters + Operationalization (Phases 3–8) — SHIPPED 2026-03-28</summary>
+
+- [x] Phase 3: CrewAI + AutoGen Adapters (3/3 plans) — completed 2026-03-23
+- [x] Phase 4: MCP Server Wrapper (2/2 plans) — completed 2026-03-23
+- [x] Phase 5: Human-in-the-Loop Gates (2/2 plans) — completed 2026-03-23
+- [x] Phase 6: Policy-as-Code (3/3 plans) — completed 2026-03-27
+- [x] Phase 7: Audit CLI + OTel Export (3/3 plans) — completed 2026-03-27
+- [x] Phase 8: REST API Sidecar (2/2 plans) — completed 2026-03-27
+
+</details>
+
+### 📋 v0.4 Multi-Agent + Anomaly Detection (Planned)
+
+- [ ] **Phase 9: Multi-Agent Enforcement** - Identity propagation, per-agent RBAC, delegation depth limits, A2A audit attribution, adapter context vars
+- [ ] **Phase 10: Anomaly Detection** - Per-agent EWMA frequency + egress spike detection, HITL escalation, audit/OTel, graduated response levels
 
 ## Phase Details
 
-### Phase 3: CrewAI + AutoGen Adapters
-**Goal:** Developers using CrewAI or AutoGen can wrap their tools with SecurityGateway using the same wrap_tools() interface as the LangChain adapter, with every security enforcement path active and fail-closed.
-**Depends on:** Phase 2 (LangChain adapter pattern established)
-**Requirements:** ADPT-01, ADPT-02, ADPT-03, ADPT-04, ADPT-07
+### Phase 9: Multi-Agent Enforcement
+**Goal**: Every agent-to-agent tool call passes through SecurityGateway with the calling agent's identity verified, hop depth enforced, and full audit attribution — so delegation chains are fully visible and privilege escalation across agents is impossible.
+**Depends on**: Phase 8 (complete SecurityGateway + REST sidecar)
+**Requirements**: MAGNT-01, MAGNT-02, MAGNT-03, MAGNT-04, MAGNT-05, MAGNT-06, MAGNT-07
 **Success Criteria** (what must be TRUE):
-  1. A developer can call wrap_tools() on a list of CrewAI tools and get back security-wrapped equivalents with no changes to their CrewAI agent setup
-  2. A developer can call wrap_tools() on a list of AutoGen tools and get back security-wrapped equivalents with no changes to their AutoGen agent setup
-  3. A permission violation on a CrewAI or AutoGen tool call results in a blocked execution, not a warning — the agent never receives a response
-  4. Prompt injection, secret redaction, and egress checks all fire on CrewAI and AutoGen tool calls identically to how they fire on LangChain tool calls
-  5. Both adapters have test coverage demonstrating fail-closed behavior under injection, permission denied, and egress violation conditions
-**Plans:** 3/3 plans complete
+  1. Developer can pass `caller_id` and `hop_depth` to `SecurityGateway.pre_tool_call()` and every audit log entry for that call includes both fields
+  2. When `max_delegation_depth` is exceeded in a supervisor→worker chain, the tool call is blocked with `DelegationDepthError` — not warned-and-continued
+  3. Each agent declared in `agents:` in argus.yaml gets its own role and permission scope; a worker agent calling a tool allowed only for supervisors is denied
+  4. A supervisor→worker tool call made via the CrewAI or LangChain adapter propagates agent identity automatically via `contextvars` without the developer manually threading `caller_id`
+  5. The HITL terminal banner for a sub-agent tool call shows the originating supervisor name and current hop depth alongside the tool arguments
+**Plans:** 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — TDD test scaffolds: failing RED test suites for CrewAI and AutoGen adapters
-- [ ] 03-02-PLAN.md — CrewAI adapter: implement argus/adapters/crewai.py, turn test_crewai.py GREEN
-- [ ] 03-03-PLAN.md — AutoGen adapter: implement argus/adapters/autogen.py, turn test_autogen.py GREEN
+- [ ] 09-01-PLAN.md — Identity infrastructure: ContextVars, AgentRegistry, DelegationDepthError, config parser
+- [ ] 09-02-PLAN.md — Gate 0.5 in SecurityGateway, OTel identity attributes, HITL sub-agent banner
+- [ ] 09-03-PLAN.md — LangChain/CrewAI ContextVar propagation, REST sidecar identity fields
 
-### Phase 4: MCP Server Wrapper
-**Goal:** Developers can place Argus in front of any MCP server so that every tool call flowing through MCP is subject to the full security stack, with fail-closed enforcement.
-**Depends on:** Phase 3
-**Requirements:** ADPT-05, ADPT-06
+### Phase 10: Anomaly Detection
+**Goal**: Argus detects when an agent's tool call rate or egress volume spikes above its established baseline, escalates to a HITL gate with structured context, and records every anomaly decision in the audit log and OTel — so operators can catch runaway or compromised agents before damage is done.
+**Depends on**: Phase 9 (agent identity infrastructure required for per-agent window attribution)
+**Requirements**: ANOM-01, ANOM-02, ANOM-03, ANOM-04, ANOM-05, ANOM-06
 **Success Criteria** (what must be TRUE):
-  1. A developer can pass an MCP server reference to a wrap_mcp_server() function and receive a security-wrapped MCP server that the rest of their code uses transparently
-  2. Every tool invocation routed through the wrapped MCP server is subject to permission enforcement, injection scanning, secret redaction, egress check, and audit logging
-  3. A security violation on an MCP tool call blocks the invocation and records it in the audit log — the MCP server never executes the blocked tool
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 04-01-PLAN.md — TDD RED: write failing test suite for MCP adapter (stub fastmcp/mcp modules)
-- [ ] 04-02-PLAN.md — Implement argus/adapters/mcp.py + add fastmcp optional dep, turn tests GREEN
-
-### Phase 5: Human-in-the-Loop Gates
-**Goal:** Developers can designate individual tools as requiring human approval before execution; when those tools are called, the agent pauses and waits for a terminal approve/deny decision that is recorded in the audit log.
-**Depends on:** Phase 3
-**Requirements:** HITL-01, HITL-02, HITL-03, HITL-04, HITL-05
-**Success Criteria** (what must be TRUE):
-  1. A developer can add require_approval: true to a tool entry in argus.yaml and that tool will never execute without explicit human confirmation
-  2. When a require_approval tool is triggered, the terminal prints a clear prompt showing the tool name and its arguments, and execution is fully paused until input arrives
-  3. Typing "approve" resumes the tool call; typing "deny" stops it and logs the rejection with tool arguments and timestamp in the audit log
-  4. If no response is received within the configured timeout period, the tool call is automatically denied and logged — no silent hang
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 05-01-PLAN.md — TDD RED: write failing test suite for HITLGate, gateway sequencing, and adapter propagation
-- [ ] 05-02-PLAN.md — Implement argus/security/hitl.py + ApprovalDeniedError + gateway gate 1.5 + adapter wiring, turn tests GREEN
-
-### Phase 6: Policy-as-Code
-**Goal:** Developers can configure all of Argus's enforcement rules — RBAC roles, secret patterns, egress allowlists, and spend cap profiles — entirely in argus.yaml, with no Python Casbin configuration required, and receive clear validation errors at startup for any misconfigured rules.
-**Depends on:** Phase 5
-**Requirements:** POLC-01, POLC-02, POLC-03, POLC-04, POLC-05
-**Success Criteria** (what must be TRUE):
-  1. A developer can define roles, tool permissions, and deny rules entirely in argus.yaml and have them enforced at runtime with no Casbin Python code
-  2. A developer can add custom regex patterns under a secrets section in argus.yaml and have those patterns applied to every tool input and output alongside built-in patterns
-  3. A developer can specify allowed domains and IPs under an egress section in argus.yaml and have those rules enforced without any code changes
-  4. A developer can define named spend cap profiles (e.g. dev/staging/prod) and select the active profile via an environment variable or CLI flag at startup
-  5. When argus.yaml contains invalid policy rules, startup fails with a specific, human-readable error message identifying the offending rule — no silent misconfiguration
-**Plans:** 3/3 plans complete
-
-Plans:
-- [ ] 06-01-PLAN.md — TDD RED: write failing test suites for all POLC-01 through POLC-05 behaviors
-- [ ] 06-02-PLAN.md — ConfigValidationError, PermissionEnforcer wildcard/deny fix, and four section loaders; turn unit tests GREEN
-- [ ] 06-03-PLAN.md — load_gateway_config orchestrator; turn integration tests GREEN; full suite gate
-
-### Phase 7: Audit CLI + OTel Export
-**Goal:** Developers can inspect the audit log from the terminal using `argus audit` with filtering options, and can push security events to external observability systems via OTel exporters configured in argus.yaml.
-**Depends on:** Phase 6
-**Requirements:** OPS-01, OPS-02, OPS-03, OPS-04
-**Success Criteria** (what must be TRUE):
-  1. Running `argus audit` prints the JSONL audit log to the terminal with colored output, severity indicators, and human-readable timestamps
-  2. Running `argus audit --filter` with type, severity, or time range flags returns only the matching events — all other events are hidden
-  3. A developer can configure an OTel exporter endpoint (Datadog, Grafana, or OTLP) in argus.yaml and have security events pushed to that endpoint without code changes
-  4. Permission denied, injection detected, and credential exposed events each emit an OTel span with structured attributes (event type, tool name, severity, agent role)
-**Plans:** 3/3 plans complete
-
-Plans:
-- [ ] 07-01-PLAN.md — TDD RED: write failing test suites for all OPS-01 through OPS-04 behaviors
-- [ ] 07-02-PLAN.md — Implement argus audit CLI command with streaming reader, Rich panels, and filter flags (OPS-01, OPS-02)
-- [ ] 07-03-PLAN.md — OtelConfig + load_otel_config + emit_security_violation + SecurityGateway violation span wiring (OPS-03, OPS-04)
-
-### Phase 8: REST API Sidecar
-**Goal:** Non-Python agents can use Argus by sending tool call requests to a local REST sidecar started with `argus serve`, which runs the full security stack and returns an allow/block decision with an audit entry.
-**Depends on:** Phase 7
-**Requirements:** OPS-05, OPS-06
-**Success Criteria** (what must be TRUE):
-  1. Running `argus serve` starts a local HTTP server and prints the address — the process stays alive until interrupted
-  2. A POST to /tool-call with a JSON body containing tool name and arguments returns a JSON response with an allow/block decision and the corresponding audit entry
-  3. A blocked tool call from the REST sidecar produces an audit log entry identical in structure to one blocked by the Python adapter — there is no second-class path through the REST interface
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] 08-01-PLAN.md — TDD RED: write failing test suite for argus serve CLI and /tool-call endpoint (OPS-05, OPS-06)
-- [ ] 08-02-PLAN.md — Implement argus/cli/serve.py with FastAPI app, SecurityGateway wiring, and rest optional extra; turn tests GREEN
-
----
+  1. After a warmup period, an agent making tool calls at 3x its established frequency triggers a HITL prompt with a banner showing call rate, EWMA baseline, z-score, and last N calls
+  2. An agent generating egress volume above its EWMA baseline by the configured z-threshold triggers a HITL prompt with the spike context
+  3. Anomaly events appear in `argus audit` output and in OTel spans with `GateType.ANOMALY` — the same observability path as permission violations
+  4. Developer can set `window_seconds`, `z_threshold`, `min_observations`, and `enabled` in an `anomaly:` block in argus.yaml and the detector respects these values at runtime
+  5. Graduated response levels (`warn_z`, `escalate_z`, `block_z`) allow low-confidence anomalies to log-only while high-confidence anomalies escalate to HITL — reducing false-positive alert fatigue
+**Plans**: TBD
 
 ## Progress
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 3. CrewAI + AutoGen Adapters | 3/3 | Complete    | 2026-03-23 |
-| 4. MCP Server Wrapper | 2/2 | Complete   | 2026-03-23 |
-| 5. Human-in-the-Loop Gates | 2/2 | Complete   | 2026-03-23 |
-| 6. Policy-as-Code | 3/3 | Complete   | 2026-03-27 |
-| 7. Audit CLI + OTel Export | 3/3 | Complete   | 2026-03-27 |
-| 8. REST API Sidecar | 2/2 | Complete   | 2026-03-27 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Security Core | v0.2.0 | — | Complete | 2026-03-08 |
+| 2. LangChain Adapter | v0.2.0 | — | Complete | 2026-03-08 |
+| 3. CrewAI + AutoGen Adapters | v0.3 | 3/3 | Complete | 2026-03-23 |
+| 4. MCP Server Wrapper | v0.3 | 2/2 | Complete | 2026-03-23 |
+| 5. Human-in-the-Loop Gates | v0.3 | 2/2 | Complete | 2026-03-23 |
+| 6. Policy-as-Code | v0.3 | 3/3 | Complete | 2026-03-27 |
+| 7. Audit CLI + OTel Export | v0.3 | 3/3 | Complete | 2026-03-27 |
+| 8. REST API Sidecar | v0.3 | 2/2 | Complete | 2026-03-27 |
+| 9. Multi-Agent Enforcement | v0.4 | 0/3 | Planned | — |
+| 10. Anomaly Detection | v0.4 | 0/? | Not started | — |
 
 ---
-*Roadmap created: 2026-03-15*
-*Milestone: v0.3.0*
+*Roadmap last updated: 2026-04-09 after Phase 9 planning*

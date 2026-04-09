@@ -79,6 +79,26 @@ class ApprovalDeniedError(ArgusSecurityError):
         self.timed_out = timed_out
 
 
+class DelegationDepthError(ArgusSecurityError):
+    """Raised when a multi-agent call chain exceeds the configured max delegation depth.
+
+    caller_id: The agent that triggered the depth limit.
+    hop_depth: The current hop depth that exceeded the maximum.
+    """
+
+    def __init__(
+        self,
+        gate: str,
+        blocked: str,
+        rule: str,
+        caller_id: str | None = None,
+        hop_depth: int = 0,
+    ) -> None:
+        super().__init__(gate=gate, blocked=blocked, rule=rule)
+        self.caller_id = caller_id
+        self.hop_depth = hop_depth
+
+
 class ConfigValidationError(ValueError):
     """Raised at startup when argus.yaml contains invalid policy rules."""
 
