@@ -254,3 +254,89 @@ def test_health_check():
     resp = client.get("/")
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
+
+
+# ---------------------------------------------------------------------------
+# Phase 9 Plan 03: REST sidecar caller_id/hop_depth — MAGNT-01
+# ---------------------------------------------------------------------------
+
+
+def test_tool_call_with_caller_id_and_hop_depth_passed_to_gateway():
+    """POST /tool-call with caller_id and hop_depth passes them to gateway.pre_tool_call."""
+    from fastapi.testclient import TestClient
+
+    from argus.cli.serve import build_app
+
+    gw = _make_gateway()
+    app = build_app(gw)
+    client = TestClient(app)
+
+    resp = client.post(
+        "/tool-call",
+        json={
+            "agent_role": "supervisor",
+            "tool_name": "web_search",
+            "tool_input": {"q": "test"},
+            "caller_id": "agent_x",
+            "hop_depth": 2,
+        },
+    )
+    assert resp.status_code == 200
+    gw.pre_tool_call.assert_called_once_with(
+        "supervisor", "web_search", {"q": "test"},
+        caller_id="agent_x",
+        hop_depth=2,
+    )
+
+
+def test_tool_call_without_identity_fields_uses_defaults():
+    """POST /tool-call without caller_id/hop_depth passes defaults to gateway (backward compat)."""
+    from fastapi.testclient import TestClient
+
+    from argus.cli.serve import build_app
+
+    gw = _make_gateway()
+    app = build_app(gw)
+    client = TestClient(app)
+
+    resp = client.post(
+        "/tool-call",
+        json={"agent_role": "analyst", "tool_name": "web_search", "tool_input": {}},
+    )
+    assert resp.status_code == 200
+    gw.pre_tool_call.assert_called_once_with(
+        "analyst", "web_search", {},
+        caller_id=None,
+        hop_depth=0,
+    )
+
+
+def test_tool_call_delegation_depth_exceeded_returns_403():
+    """POST /tool-call with hop_depth exceeding max returns 403 with DelegationDepthError detail."""
+    from fastapi.testclient import TestClient
+
+    from argus.cli.serve import build_app
+    from argus.security.exceptions import DelegationDepthError
+
+    gw = _make_gateway(
+        pre_raise=DelegationDepthError(
+            gate="identity", blocked="web_search", rule="max_delegation_depth"
+        )
+    )
+    app = build_app(gw)
+    client = TestClient(app)
+
+    resp = client.post(
+        "/tool-call",
+        json={
+            "agent_role": "worker",
+            "tool_name": "web_search",
+            "tool_input": {},
+            "caller_id": "deep_agent",
+            "hop_depth": 10,
+        },
+    )
+    assert resp.status_code == 403
+    body = resp.json()
+    assert body["decision"] == "block"
+    assert body["violation"] == "identity"

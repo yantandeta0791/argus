@@ -15,6 +15,8 @@ class ToolCallRequest(BaseModel):
     tool_name: str
     tool_input: dict[str, Any]
     tool_output: str | None = None
+    caller_id: str | None = None    # MAGNT-01: calling agent identity
+    hop_depth: int = 0              # MAGNT-01: delegation depth from root supervisor
 
 
 class ToolCallResponse(BaseModel):
@@ -62,8 +64,14 @@ def build_app(gateway):
                 },
             )
 
-        # Pre-gate
-        gateway.pre_tool_call(req.agent_role, req.tool_name, req.tool_input)
+        # Pre-gate (with optional caller identity for multi-agent enforcement)
+        gateway.pre_tool_call(
+            req.agent_role,
+            req.tool_name,
+            req.tool_input,
+            caller_id=req.caller_id,
+            hop_depth=req.hop_depth,
+        )
 
         # Post-gate (only if tool_output provided)
         redacted_output: str | None = None
