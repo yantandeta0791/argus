@@ -50,7 +50,7 @@
 - [x] **MAGNT-03**: Audit log entries include `caller_id` and `hop_depth` for every tool call in a delegation chain
 - [x] **MAGNT-04**: OTel violation spans include `argus.security.caller_id` and `argus.security.hop_depth` attributes
 - [x] **MAGNT-05**: Developer can set `max_delegation_depth` in argus.yaml — exceeding it raises `DelegationDepthError` (fail-closed)
-- [ ] **MAGNT-06**: CrewAI and LangChain adapters propagate agent identity via `contextvars` in supervisor/worker patterns
+- [x] **MAGNT-06**: CrewAI and LangChain adapters propagate agent identity via `contextvars` in supervisor/worker patterns
 - [x] **MAGNT-07**: HITL banner for sub-agent tool calls shows originating supervisor and hop depth
 
 ### Anomaly Detection
@@ -126,7 +126,7 @@
 | MAGNT-03 | Phase 9 | Complete |
 | MAGNT-04 | Phase 9 | Complete |
 | MAGNT-05 | Phase 9 | Complete |
-| MAGNT-06 | Phase 9 | Pending |
+| MAGNT-06 | Phase 9 | Complete |
 | MAGNT-07 | Phase 9 | Complete |
 | ANOM-01 | Phase 10 | Pending |
 | ANOM-02 | Phase 10 | Pending |
