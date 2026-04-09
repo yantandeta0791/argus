@@ -225,6 +225,35 @@ def load_spend_profiles(raw: dict, active_profile: str | None = None) -> SpendCo
     return SpendConfig(**spend_kwargs)
 
 
+def load_agents_config(raw: dict):
+    """Parse agents: YAML section into AgentRegistryConfig.
+
+    Accepts the raw dict from yaml.safe_load(argus.yaml).
+    Returns AgentRegistryConfig if agents section with a registry is present.
+    Returns None if section absent, empty, or has no registry entries.
+
+    AgentRegistryConfig is imported lazily to avoid circular imports between
+    argus.llm and argus.security. Follows identical pattern as load_hitl_config.
+
+    MAGNT-01, MAGNT-05.
+    """
+    agents_raw = raw.get("agents", {}) or {}
+    if not agents_raw:
+        return None
+    registry_raw = agents_raw.get("registry", {}) or {}
+    if not registry_raw:
+        return None
+    from argus.security.identity import AgentRegistryConfig  # lazy import — avoids circular dep
+    agents = {}
+    for agent_id, agent_cfg in registry_raw.items():
+        agent_cfg = agent_cfg or {}
+        # Missing role key falls back to using the agent_id as the role name
+        role = agent_cfg.get("role", agent_id)
+        agents[agent_id] = role
+    max_depth = agents_raw.get("max_delegation_depth", 3)
+    return AgentRegistryConfig(agents=agents, max_delegation_depth=max_depth)
+
+
 def load_gateway_config(raw: dict):
     """Assemble a GatewayConfig from a raw yaml.safe_load dict.
 
@@ -239,6 +268,7 @@ def load_gateway_config(raw: dict):
     egress = load_egress_config(raw)
     hitl = load_hitl_config(raw)
     otel = load_otel_config(raw)
+    agents_cfg = load_agents_config(raw)
 
     return GatewayConfig(
         permissions=permissions,
@@ -246,4 +276,6 @@ def load_gateway_config(raw: dict):
         egress_allowlist=egress,
         hitl=hitl,
         otel=otel,
+        agents=agents_cfg,
+        max_delegation_depth=agents_cfg.max_delegation_depth if agents_cfg is not None else 3,
     )

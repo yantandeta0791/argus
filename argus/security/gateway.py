@@ -38,6 +38,8 @@ class GatewayConfig:
     egress_allowlist: list[str] = field(default_factory=list)
     hitl: Optional[HITLConfig] = None
     otel: Optional[Any] = None  # OtelConfig from argus/llm/config.py (lazy typed to avoid circular import)
+    agents: Optional[Any] = None  # AgentRegistryConfig (lazy typed to avoid circular import) — MAGNT-01
+    max_delegation_depth: int = 3  # mirrors AgentRegistryConfig.max_delegation_depth — MAGNT-02
 
 
 class SecurityGateway:

@@ -336,3 +336,119 @@ def test_load_gateway_config_with_otel_builds_emitter():
         security_otel=emitter,
     )
     assert gateway._security_otel is emitter
+
+
+# ---------------------------------------------------------------------------
+# MAGNT-01 / MAGNT-05: Agents config loader tests (load_agents_config)
+# ---------------------------------------------------------------------------
+
+
+def test_load_agents_config_returns_none_when_no_agents_section():
+    def _load():
+        from argus.llm.config import load_agents_config
+        return load_agents_config({})
+
+    result = _load()
+    assert result is None
+
+
+def test_load_agents_config_returns_none_when_empty_agents_section():
+    def _load():
+        from argus.llm.config import load_agents_config
+        return load_agents_config({"agents": {}})
+
+    result = _load()
+    assert result is None
+
+
+def test_load_agents_config_parses_registry_and_depth():
+    def _load():
+        from argus.llm.config import load_agents_config
+        raw = {
+            "agents": {
+                "max_delegation_depth": 5,
+                "registry": {
+                    "supervisor": {"role": "admin"},
+                    "worker": {"role": "reader"},
+                },
+            }
+        }
+        return load_agents_config(raw)
+
+    result = _load()
+    assert result is not None
+    assert result.agents == {"supervisor": "admin", "worker": "reader"}
+    assert result.max_delegation_depth == 5
+
+
+def test_load_agents_config_missing_role_uses_agent_name():
+    def _load():
+        from argus.llm.config import load_agents_config
+        raw = {
+            "agents": {
+                "registry": {
+                    "worker": {},  # no role key
+                },
+            }
+        }
+        return load_agents_config(raw)
+
+    result = _load()
+    assert result is not None
+    assert result.agents["worker"] == "worker"
+
+
+def test_load_agents_config_default_max_depth_when_not_specified():
+    def _load():
+        from argus.llm.config import load_agents_config
+        raw = {
+            "agents": {
+                "registry": {"supervisor": {"role": "admin"}},
+            }
+        }
+        return load_agents_config(raw)
+
+    result = _load()
+    assert result is not None
+    assert result.max_delegation_depth == 3
+
+
+def test_gateway_config_has_agents_field():
+    from argus.security.gateway import GatewayConfig
+
+    config = GatewayConfig()
+    assert config.agents is None
+
+
+def test_gateway_config_has_max_delegation_depth_field():
+    from argus.security.gateway import GatewayConfig
+
+    config = GatewayConfig()
+    assert config.max_delegation_depth == 3
+
+
+def test_load_gateway_config_populates_agents():
+    def _load():
+        from argus.llm.config import load_gateway_config
+        raw = {
+            "agents": {
+                "max_delegation_depth": 4,
+                "registry": {"supervisor": {"role": "admin"}},
+            }
+        }
+        return load_gateway_config(raw)
+
+    result = _load()
+    assert result.agents is not None
+    assert result.agents.agents == {"supervisor": "admin"}
+    assert result.max_delegation_depth == 4
+
+
+def test_load_gateway_config_agents_none_when_absent():
+    def _load():
+        from argus.llm.config import load_gateway_config
+        return load_gateway_config({})
+
+    result = _load()
+    assert result.agents is None
+    assert result.max_delegation_depth == 3
