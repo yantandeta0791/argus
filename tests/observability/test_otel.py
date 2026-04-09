@@ -104,3 +104,49 @@ def test_emit_security_violation_span():
     assert spans[0].attributes["argus.security.tool_name"] == "read_file"
     assert spans[0].attributes["argus.security.severity"] == "HIGH"
     assert spans[0].attributes["argus.security.agent_role"] == "analyst"
+
+
+def test_emit_security_violation_with_caller_id_and_hop_depth():
+    """MAGNT: emit_security_violation(..., caller_id=..., hop_depth=...) sets
+    argus.security.caller_id and argus.security.hop_depth span attributes."""
+    from argus.observability.otel import OtelEmitter
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    exporter = InMemorySpanExporter()
+    emitter = OtelEmitter(service_name="argus-test", exporter=exporter)
+    emitter.emit_security_violation(
+        event_type="identity",
+        tool_name="read_file",
+        severity="HIGH",
+        agent_role="worker",
+        caller_id="rogue_agent",
+        hop_depth=3,
+    )
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    assert spans[0].attributes["argus.security.caller_id"] == "rogue_agent"
+    assert spans[0].attributes["argus.security.hop_depth"] == 3
+
+
+def test_emit_security_violation_backward_compat_no_identity():
+    """MAGNT: emit_security_violation without caller_id/hop_depth uses defaults (backward compat)."""
+    from argus.observability.otel import OtelEmitter
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    exporter = InMemorySpanExporter()
+    emitter = OtelEmitter(service_name="argus-test", exporter=exporter)
+    emitter.emit_security_violation(
+        event_type="permission",
+        tool_name="read_file",
+        severity="HIGH",
+        agent_role="analyst",
+    )
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    # caller_id defaults to "" (empty string stored in span), hop_depth defaults to 0
+    assert spans[0].attributes["argus.security.caller_id"] == ""
+    assert spans[0].attributes["argus.security.hop_depth"] == 0

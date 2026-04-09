@@ -218,6 +218,58 @@ def test_load_hitl_config_parses_tools():
     assert "list_dir" not in config.require_approval
 
 
+# ---------------------------------------------------------------------------
+# Phase 9 Plan 02: Sub-agent delegation banner tests
+# ---------------------------------------------------------------------------
+
+
+class TestHITLSubAgentBanner:
+    def test_sub_agent_banner_shown_when_hop_depth_greater_than_zero(self, capsys):
+        """MAGNT: when hop_depth > 0 and caller_id is set, HITL banner includes
+        'Delegated by: {name} (hop {depth}/{max})' line."""
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            gate.check(
+                tool_name="delete_file",
+                tool_input={"path": "/tmp/x"},
+                caller_id="supervisor",
+                hop_depth=2,
+                max_depth=3,
+            )
+
+        captured = capsys.readouterr()
+        assert "Delegated by: supervisor (hop 2/3)" in captured.out
+
+    def test_no_delegation_line_when_hop_depth_is_zero(self, capsys):
+        """MAGNT: when hop_depth == 0, HITL banner does NOT include delegation line."""
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            gate.check(
+                tool_name="delete_file",
+                tool_input={"path": "/tmp/x"},
+                hop_depth=0,
+            )
+
+        captured = capsys.readouterr()
+        assert "Delegated by" not in captured.out
+
+    def test_backward_compat_no_new_params(self, capsys):
+        """MAGNT: HITLGate.check() works unchanged without caller_id/hop_depth/max_depth."""
+        config = _make_config()
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            gate.check(tool_name="delete_file", tool_input={"path": "/tmp/x"})
+
+        captured = capsys.readouterr()
+        assert "[ARGUS HITL]" in captured.out
+        assert "Delegated by" not in captured.out
+
+
 def test_load_hitl_config_parses_timeout():
     """HITL-01: load_hitl_config parses hitl.timeout_seconds; empty dict returns None.
 

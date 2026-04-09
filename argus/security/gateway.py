@@ -15,8 +15,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from argus.security.exceptions import ArgusSecurityError, ApprovalDeniedError
+from argus.security.exceptions import ArgusSecurityError, ApprovalDeniedError, DelegationDepthError
 from argus.security.hitl import HITLConfig, HITLGate
+from argus.security.identity import AgentRegistry, get_caller_context
 from argus.security.permission.enforcer import PermissionEnforcer
 from argus.security.permission.policy import PolicyConfig
 from argus.security.prompt_shield.shield import PromptShield
@@ -68,6 +69,8 @@ class SecurityGateway:
         # Store hitl config; HITLGate is instantiated lazily in pre_tool_call so
         # the module-level HITLGate reference remains patchable during tests.
         self._hitl_config = config.hitl
+        # AgentRegistry for Gate 0.5 identity resolution (MAGNT-01)
+        self._agent_registry = AgentRegistry(config.agents)
         # EgressChecker with a closure sink that forwards to obs if configured (Phase 7)
         self._security_events: list[SecurityEvent] = []
 
@@ -81,9 +84,17 @@ class SecurityGateway:
             event_sink=_egress_sink,
         )
 
-    def _emit_violation(self, gate: str, tool_name: str | None, agent_role: str | None) -> None:
+    def _emit_violation(
+        self,
+        gate: str,
+        tool_name: str | None,
+        agent_role: str | None,
+        caller_id: str | None = None,
+        hop_depth: int = 0,
+    ) -> None:
         """Emit OTel violation span if security OTel emitter is configured (OPS-04).
 
+        caller_id and hop_depth are MAGNT-04 identity attributes passed from Gate 0.5.
         Only called on violation outcomes — allowed tool calls must NOT emit spans.
         """
         if not self._security_otel:
@@ -94,6 +105,7 @@ class SecurityGateway:
             "egress": "HIGH",
             "redaction": "HIGH",
             "hitl": "HIGH",
+            "identity": "HIGH",
         }
         severity = severity_map.get(gate, "INFO")
         self._security_otel.emit_security_violation(
@@ -101,6 +113,8 @@ class SecurityGateway:
             tool_name=tool_name,
             severity=severity,
             agent_role=agent_role,
+            caller_id=caller_id,
+            hop_depth=hop_depth,
         )
 
     def pre_tool_call(
@@ -108,13 +122,42 @@ class SecurityGateway:
         agent_role: str,
         tool_name: str,
         tool_input: dict[str, Any],
+        *,
+        caller_id: str | None = None,
+        hop_depth: int | None = None,
     ) -> dict[str, Any]:
         """
         Run before tool execution.
-        Gate 1 — Permission: raises PermissionDeniedError if role cannot call tool.
-        Gate 2 — Audit: raises AuditUnavailableError if logger is unreachable (fail-closed).
+        Gate 0.5 — Identity: resolves caller_id from ContextVars, checks delegation depth.
+        Gate 1   — Permission: raises PermissionDeniedError if role cannot call tool.
+        Gate 1.5 — HITL: pauses for human approval if configured.
+        Gate 2   — Audit: raises AuditUnavailableError if logger is unreachable (fail-closed).
         Returns tool_input unchanged.
         """
+        # Gate 0.5: Identity resolution and delegation depth enforcement (MAGNT-01/03/04/05)
+        ctx_caller_id, ctx_hop_depth = get_caller_context()
+        effective_caller_id: str | None = caller_id if caller_id is not None else ctx_caller_id
+        effective_hop_depth: int = hop_depth if hop_depth is not None else ctx_hop_depth
+
+        # Resolve agent_role from AgentRegistry when caller_id is known
+        if effective_caller_id is not None:
+            agent_role = self._agent_registry.resolve_role(effective_caller_id, agent_role)
+
+        # Fail-closed: reject calls that exceed max delegation depth
+        max_depth = self._agent_registry.max_depth
+        if effective_hop_depth > max_depth:
+            self._emit_violation(
+                "identity", tool_name, agent_role,
+                caller_id=effective_caller_id, hop_depth=effective_hop_depth,
+            )
+            raise DelegationDepthError(
+                gate="identity",
+                blocked=tool_name,
+                rule=f"hop_depth={effective_hop_depth} > max={max_depth}",
+                caller_id=effective_caller_id,
+                hop_depth=effective_hop_depth,
+            )
+
         # Gate 1: Permission (hard stop)
         try:
             self._permission.enforce(agent_role, tool_name)
@@ -128,14 +171,21 @@ class SecurityGateway:
                     rule_triggered=getattr(exc, "rule", None),
                 )
                 self._obs.on_security_event(event)
-            self._emit_violation("permission", tool_name, agent_role)
+            self._emit_violation(
+                "permission", tool_name, agent_role,
+                caller_id=effective_caller_id, hop_depth=effective_hop_depth,
+            )
             raise
 
         # Gate 1.5: HITL approval gate (runs only when configured)
         if self._hitl_config and self._hitl_config.needs_approval(tool_name):
             try:
                 HITLGate(self._hitl_config).check(
-                    tool_name=tool_name, tool_input=tool_input
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    caller_id=effective_caller_id,
+                    hop_depth=effective_hop_depth,
+                    max_depth=max_depth,
                 )
                 # Approved — log the decision before continuing to Gate 2
                 self._audit.send(
@@ -157,7 +207,10 @@ class SecurityGateway:
                         "tool_input": tool_input,
                     }
                 )
-                self._emit_violation("hitl", tool_name, agent_role)
+                self._emit_violation(
+                    "hitl", tool_name, agent_role,
+                    caller_id=effective_caller_id, hop_depth=effective_hop_depth,
+                )
                 raise
 
         # Gate 2: Audit pre-call (hard stop — fail-closed)
@@ -166,6 +219,8 @@ class SecurityGateway:
                 "event_type": "tool_call_pre",
                 "agent_role": agent_role,
                 "tool_name": tool_name,
+                "caller_id": effective_caller_id,
+                "hop_depth": effective_hop_depth,
                 # tool_input deliberately omitted from audit — may contain sensitive params
                 # Phase 7 adds structured input logging with redaction applied first
             }

@@ -40,6 +40,9 @@ _ARGUS_SECURITY_EVENT_TYPE = "argus.security.event_type"
 _ARGUS_SECURITY_TOOL = "argus.security.tool_name"
 _ARGUS_SECURITY_SEVERITY = "argus.security.severity"
 _ARGUS_SECURITY_AGENT_ROLE = "argus.security.agent_role"
+# Multi-agent identity span attributes (MAGNT-04)
+_ARGUS_SECURITY_CALLER_ID = "argus.security.caller_id"
+_ARGUS_SECURITY_HOP_DEPTH = "argus.security.hop_depth"
 
 
 class FileSpanExporter(SpanExporter):
@@ -123,8 +126,12 @@ class OtelEmitter:
         tool_name: str | None,
         severity: str,
         agent_role: str | None,
+        caller_id: str | None = None,
+        hop_depth: int = 0,
     ) -> None:
         """Emit argus.security.violation span for a security enforcement event (OPS-04).
+
+        caller_id and hop_depth are MAGNT-04 identity attributes — included when Gate 0.5 fires.
 
         Fail-open: wrapped in try/except — OTel emission must never block security enforcement.
         """
@@ -134,6 +141,8 @@ class OtelEmitter:
                 span.set_attribute(_ARGUS_SECURITY_TOOL, tool_name or "")
                 span.set_attribute(_ARGUS_SECURITY_SEVERITY, severity)
                 span.set_attribute(_ARGUS_SECURITY_AGENT_ROLE, agent_role or "")
+                span.set_attribute(_ARGUS_SECURITY_CALLER_ID, caller_id or "")
+                span.set_attribute(_ARGUS_SECURITY_HOP_DEPTH, hop_depth)
         except Exception:
             pass  # Fail-open: OTel emission must never block security enforcement
 

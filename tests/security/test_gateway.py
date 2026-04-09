@@ -394,9 +394,196 @@ def test_gateway_emits_violation_on_permission_block():
     with pytest.raises(PermissionDeniedError):
         gateway.pre_tool_call("analyst", "secret_tool", {})
 
-    mock_otel.emit_security_violation.assert_called_once_with(
-        event_type="permission",
-        tool_name="secret_tool",
-        severity="HIGH",
-        agent_role="analyst",
+    # verify the call happened with the core args (identity fields default to None/0 when no caller context)
+    call_kwargs = mock_otel.emit_security_violation.call_args[1]
+    assert call_kwargs["event_type"] == "permission"
+    assert call_kwargs["tool_name"] == "secret_tool"
+    assert call_kwargs["severity"] == "HIGH"
+    assert call_kwargs["agent_role"] == "analyst"
+
+
+# ---------------------------------------------------------------------------
+# Phase 9 Plan 02: Gate 0.5 Identity enforcement tests
+# ---------------------------------------------------------------------------
+
+
+def test_gate05_explicit_caller_id_resolves_role():
+    """Gate 0.5: when caller_id is passed explicitly and is in AgentRegistry,
+    agent_role is resolved from the registry and used for permission check."""
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+    from argus.security.identity import AgentRegistryConfig
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    registry_cfg = AgentRegistryConfig(
+        agents={"supervisor_agent": "supervisor"},
+        max_delegation_depth=3,
     )
+    config = GatewayConfig(agents=registry_cfg)
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    # Call with explicit caller_id — role should be resolved from registry
+    result = gateway.pre_tool_call(
+        agent_role="default",
+        tool_name="read_file",
+        tool_input={"path": "/tmp/x"},
+        caller_id="supervisor_agent",
+        hop_depth=1,
+    )
+    assert result == {"path": "/tmp/x"}
+
+    # Audit payload should carry caller_id and hop_depth
+    sent = mock_audit.send.call_args[0][0]
+    assert sent["caller_id"] == "supervisor_agent"
+    assert sent["hop_depth"] == 1
+
+
+def test_gate05_no_caller_id_backward_compat():
+    """Gate 0.5: pre_tool_call(agent_role, tool_name, tool_input) still works
+    without caller_id/hop_depth (backward compatibility)."""
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    config = GatewayConfig()
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    result = gateway.pre_tool_call("analyst", "read_file", {"path": "/tmp/x"})
+    assert result == {"path": "/tmp/x"}
+
+    sent = mock_audit.send.call_args[0][0]
+    assert sent["caller_id"] is None
+    assert sent["hop_depth"] == 0
+
+
+def test_gate05_delegation_depth_exceeded_raises():
+    """Gate 0.5: when hop_depth exceeds max_delegation_depth, DelegationDepthError is raised."""
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+    from argus.security.identity import AgentRegistryConfig
+    from argus.security.exceptions import DelegationDepthError
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    registry_cfg = AgentRegistryConfig(
+        agents={"agent_a": "worker"},
+        max_delegation_depth=3,
+    )
+    config = GatewayConfig(agents=registry_cfg)
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    with pytest.raises(DelegationDepthError):
+        gateway.pre_tool_call(
+            agent_role="worker",
+            tool_name="read_file",
+            tool_input={},
+            caller_id="agent_a",
+            hop_depth=4,
+        )
+
+
+def test_gate05_delegation_depth_at_max_allowed():
+    """Gate 0.5: hop_depth == max_delegation_depth does NOT raise (boundary: <= is allowed)."""
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+    from argus.security.identity import AgentRegistryConfig
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    registry_cfg = AgentRegistryConfig(
+        agents={"agent_b": "analyst"},
+        max_delegation_depth=3,
+    )
+    config = GatewayConfig(agents=registry_cfg)
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    # hop_depth=3 with max=3 should NOT raise
+    result = gateway.pre_tool_call(
+        agent_role="analyst",
+        tool_name="read_file",
+        tool_input={},
+        caller_id="agent_b",
+        hop_depth=3,
+    )
+    assert result == {}
+
+
+def test_gate05_contextvar_identity_resolution():
+    """Gate 0.5: when no explicit caller_id is passed, reads from ContextVars."""
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+    from argus.security.identity import set_caller_context, reset_caller_context
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    config = GatewayConfig()
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    tokens = set_caller_context("ctx_agent", 2)
+    try:
+        gateway.pre_tool_call("analyst", "read_file", {})
+    finally:
+        reset_caller_context(tokens)
+
+    sent = mock_audit.send.call_args[0][0]
+    assert sent["caller_id"] == "ctx_agent"
+    assert sent["hop_depth"] == 2
+
+
+def test_gate05_emit_violation_passes_identity_to_otel():
+    """Gate 0.5: when DelegationDepthError is raised, OTel emitter receives caller_id and hop_depth."""
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+    from argus.security.identity import AgentRegistryConfig
+    from argus.security.exceptions import DelegationDepthError
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    mock_otel = MagicMock()
+    registry_cfg = AgentRegistryConfig(
+        agents={"rogue_agent": "worker"},
+        max_delegation_depth=2,
+    )
+    config = GatewayConfig(agents=registry_cfg)
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit, security_otel=mock_otel)
+
+    with pytest.raises(DelegationDepthError):
+        gateway.pre_tool_call(
+            agent_role="worker",
+            tool_name="read_file",
+            tool_input={},
+            caller_id="rogue_agent",
+            hop_depth=3,
+        )
+
+    # Verify OTel emit was called with identity fields
+    call_kwargs = mock_otel.emit_security_violation.call_args[1]
+    assert call_kwargs.get("caller_id") == "rogue_agent"
+    assert call_kwargs.get("hop_depth") == 3
+
+
+def test_gate05_no_agents_config_no_depth_error():
+    """Gate 0.5: when no agents config, default max_depth=3 still applies correctly."""
+    from argus.security.gateway import SecurityGateway, GatewayConfig
+    from argus.security.audit.logger import AuditLogger
+    from argus.security.exceptions import DelegationDepthError
+
+    mock_audit = MagicMock(spec=AuditLogger)
+    config = GatewayConfig()  # agents=None
+    gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+
+    # hop_depth=3 with default max=3 should NOT raise
+    result = gateway.pre_tool_call(
+        agent_role="analyst",
+        tool_name="read_file",
+        tool_input={},
+        caller_id="some_agent",
+        hop_depth=3,
+    )
+    assert result == {}
+
+    # hop_depth=4 should raise
+    with pytest.raises(DelegationDepthError):
+        gateway.pre_tool_call(
+            agent_role="analyst",
+            tool_name="read_file",
+            tool_input={},
+            caller_id="some_agent",
+            hop_depth=4,
+        )

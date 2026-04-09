@@ -49,8 +49,18 @@ class HITLGate:
     def __init__(self, config: HITLConfig) -> None:
         self._config = config
 
-    def check(self, tool_name: str, tool_input: dict) -> None:
+    def check(
+        self,
+        tool_name: str,
+        tool_input: dict,
+        caller_id: str | None = None,
+        hop_depth: int = 0,
+        max_depth: int = 3,
+    ) -> None:
         """Prompt for approval if this tool requires it.
+
+        caller_id, hop_depth, and max_depth are optional MAGNT parameters for
+        displaying sub-agent delegation context in the approval banner.
 
         Returns None on approval.
         Raises ApprovalDeniedError on deny, timeout, or two invalid inputs.
@@ -62,6 +72,9 @@ class HITLGate:
 
         # Print the HITL banner so the operator can make an informed decision
         print(f"\n[ARGUS HITL] Approval required for tool '{tool_name}'")
+        # Sub-agent delegation context — shown only when call is delegated (hop_depth > 0)
+        if hop_depth > 0 and caller_id:
+            print(f"Delegated by: {caller_id} (hop {hop_depth}/{max_depth})")
         print(json.dumps(tool_input, indent=2))
         print("Type 'approve' to allow or 'deny' to reject:")
 
