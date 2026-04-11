@@ -23,6 +23,7 @@ class GateType(str, Enum):
     SKILL_LIFECYCLE = "skill_lifecycle"
     HITL = "hitl"
     IDENTITY = "identity"
+    ANOMALY = "anomaly"
 
 
 class SecurityEvent(BaseModel):

@@ -225,6 +225,34 @@ def load_spend_profiles(raw: dict, active_profile: str | None = None) -> SpendCo
     return SpendConfig(**spend_kwargs)
 
 
+def load_anomaly_config(raw: dict):
+    """Parse anomaly: YAML section into AnomalyConfig.
+
+    Accepts the raw dict from yaml.safe_load(argus.yaml).
+    Returns AnomalyConfig if anomaly section present and enabled: true (default).
+    Returns None if section absent, empty, or has enabled: false.
+
+    AnomalyConfig is imported lazily to avoid circular imports between argus.llm
+    and argus.security. Follows identical pattern as load_hitl_config.
+
+    ANOM-01, ANOM-02.
+    """
+    anomaly_raw = raw.get("anomaly", {}) or {}
+    if not anomaly_raw:
+        return None
+    if not anomaly_raw.get("enabled", True):
+        return None
+    from argus.security.anomaly.detector import AnomalyConfig  # lazy import — avoids circular dep
+    return AnomalyConfig(
+        enabled=True,
+        window_seconds=anomaly_raw.get("window_seconds", 60),
+        min_observations=anomaly_raw.get("min_observations", 10),
+        warn_z=anomaly_raw.get("warn_z", 2.0),
+        escalate_z=anomaly_raw.get("escalate_z", 3.0),
+        block_z=anomaly_raw.get("block_z", 4.0),
+    )
+
+
 def load_agents_config(raw: dict):
     """Parse agents: YAML section into AgentRegistryConfig.
 
@@ -269,6 +297,7 @@ def load_gateway_config(raw: dict):
     hitl = load_hitl_config(raw)
     otel = load_otel_config(raw)
     agents_cfg = load_agents_config(raw)
+    anomaly = load_anomaly_config(raw)
 
     return GatewayConfig(
         permissions=permissions,
@@ -278,4 +307,5 @@ def load_gateway_config(raw: dict):
         otel=otel,
         agents=agents_cfg,
         max_delegation_depth=agents_cfg.max_delegation_depth if agents_cfg is not None else 3,
+        anomaly=anomaly,
     )

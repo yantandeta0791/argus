@@ -99,6 +99,17 @@ class DelegationDepthError(ArgusSecurityError):
         self.hop_depth = hop_depth
 
 
+class AnomalyBlockedError(ArgusSecurityError):
+    """Raised when the anomaly detector triggers a BLOCK response level.
+
+    gate: Always "anomaly"
+    blocked: The tool name that triggered the anomaly
+    rule: The threshold rule that fired (e.g. "z>=4.0")
+    """
+
+    pass
+
+
 class ConfigValidationError(ValueError):
     """Raised at startup when argus.yaml contains invalid policy rules."""
 

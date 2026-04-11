@@ -41,6 +41,7 @@ class GatewayConfig:
     otel: Optional[Any] = None  # OtelConfig from argus/llm/config.py (lazy typed to avoid circular import)
     agents: Optional[Any] = None  # AgentRegistryConfig (lazy typed to avoid circular import) — MAGNT-01
     max_delegation_depth: int = 3  # mirrors AgentRegistryConfig.max_delegation_depth — MAGNT-02
+    anomaly: Optional[Any] = None  # AnomalyConfig (lazy typed to avoid circular import) — ANOM-01
 
 
 class SecurityGateway:
