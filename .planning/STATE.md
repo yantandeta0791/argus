@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Multi-Agent + Anomaly Detection
 status: completed
-stopped_at: Completed 09-03-PLAN.md
-last_updated: "2026-04-09T23:37:41.042Z"
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-04-11T00:29:58.426Z"
 last_activity: 2026-04-09 — Phase 09 Plan 03 (adapter identity propagation + REST sidecar) complete
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
   percent: 100
 ---
 
@@ -106,11 +106,15 @@ Progress: [██████████] 100%
 | Lazy import of set_caller_context inside invoke()/run() | Avoids import-time dependency on identity module; keeps adapters importable without identity module loaded |
 | tokens=None sentinel pattern in adapters | Only reset_caller_context when set was called — prevents errors on non-identity code paths; caller_id=None skips ContextVar entirely |
 | Phase 09 P03 | 3 | 2 tasks | 6 files |
+| Phase 10-anomaly-detection P01 | 5 | 1 tasks | 7 files |
+| z-score uses pre-update EWMA and prior window (10-01) | Prevents spike from inflating its own denominator — ensures 100x spike against stable baseline returns BLOCK not WARN |
+| stdev=0 with deviation → BLOCK (10-01) | Perfectly stable baseline means any deviation is maximally anomalous; stdev=0 with value==baseline → OK edge case preserved |
+| AnomalyDetector NOT thread-safe (10-01) | Per-agent state is in-process dict; single-worker enforcement required when anomaly gate enabled (REST sidecar constraint) |
 
 ## Session Continuity
 
-Next action: Execute Phase 10 — Anomaly Detection
-Stopped at: Completed 09-03-PLAN.md
+Next action: Execute Phase 10 Plan 02 — Wire AnomalyDetector into SecurityGateway Gate 1.75
+Stopped at: Completed 10-01-PLAN.md
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 

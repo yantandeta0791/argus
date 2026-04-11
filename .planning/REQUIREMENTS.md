@@ -55,12 +55,12 @@
 
 ### Anomaly Detection
 
-- [ ] **ANOM-01**: Argus tracks tool call frequency per agent role via sliding window and detects spikes using EWMA baseline + z-score
-- [ ] **ANOM-02**: Argus tracks egress volume per agent role and detects sudden spikes above the EWMA baseline
+- [x] **ANOM-01**: Argus tracks tool call frequency per agent role via sliding window and detects spikes using EWMA baseline + z-score
+- [x] **ANOM-02**: Argus tracks egress volume per agent role and detects sudden spikes above the EWMA baseline
 - [ ] **ANOM-03**: When an anomaly is detected, Argus escalates to HITL gate with context banner showing rate, baseline, z-score, and last N tool calls
 - [ ] **ANOM-04**: Anomaly events are written to audit log and emitted as OTel spans (`GateType.ANOMALY`)
-- [ ] **ANOM-05**: Developer can configure anomaly thresholds in argus.yaml (`anomaly:` section — `window_seconds`, `z_threshold`, `min_observations`, `enabled`)
-- [ ] **ANOM-06**: Graduated response levels (configurable `warn_z` / `escalate_z` / `block_z` thresholds) reduce HITL fatigue for moderate anomalies
+- [x] **ANOM-05**: Developer can configure anomaly thresholds in argus.yaml (`anomaly:` section — `window_seconds`, `z_threshold`, `min_observations`, `enabled`)
+- [x] **ANOM-06**: Graduated response levels (configurable `warn_z` / `escalate_z` / `block_z` thresholds) reduce HITL fatigue for moderate anomalies
 
 ## Future Requirements (v0.5+)
 
@@ -128,12 +128,12 @@
 | MAGNT-05 | Phase 9 | Complete |
 | MAGNT-06 | Phase 9 | Complete |
 | MAGNT-07 | Phase 9 | Complete |
-| ANOM-01 | Phase 10 | Pending |
-| ANOM-02 | Phase 10 | Pending |
+| ANOM-01 | Phase 10 | Complete |
+| ANOM-02 | Phase 10 | Complete |
 | ANOM-03 | Phase 10 | Pending |
 | ANOM-04 | Phase 10 | Pending |
-| ANOM-05 | Phase 10 | Pending |
-| ANOM-06 | Phase 10 | Pending |
+| ANOM-05 | Phase 10 | Complete |
+| ANOM-06 | Phase 10 | Complete |
 
 **Coverage:**
 - v0.3 requirements: 24 total (24 complete)
