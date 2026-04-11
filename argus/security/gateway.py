@@ -15,7 +15,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from argus.security.exceptions import ArgusSecurityError, ApprovalDeniedError, DelegationDepthError
+from argus.security.anomaly.detector import AnomalyDetector, ResponseLevel
+from argus.security.exceptions import (
+    ArgusSecurityError,
+    AnomalyBlockedError,
+    ApprovalDeniedError,
+    DelegationDepthError,
+)
 from argus.security.hitl import HITLConfig, HITLGate
 from argus.security.identity import AgentRegistry, get_caller_context
 from argus.security.permission.enforcer import PermissionEnforcer
@@ -72,6 +78,13 @@ class SecurityGateway:
         self._hitl_config = config.hitl
         # AgentRegistry for Gate 0.5 identity resolution (MAGNT-01)
         self._agent_registry = AgentRegistry(config.agents)
+        # Gate 1.75 / Gate 5.5: per-metric AnomalyDetector instances (ANOM-01)
+        if config.anomaly is not None:
+            self._anomaly_freq = AnomalyDetector(config.anomaly, metric_type="frequency")
+            self._anomaly_egress = AnomalyDetector(config.anomaly, metric_type="egress")
+        else:
+            self._anomaly_freq = None
+            self._anomaly_egress = None
         # EgressChecker with a closure sink that forwards to obs if configured (Phase 7)
         self._security_events: list[SecurityEvent] = []
 
@@ -107,6 +120,7 @@ class SecurityGateway:
             "redaction": "HIGH",
             "hitl": "HIGH",
             "identity": "HIGH",
+            "anomaly": "HIGH",
         }
         severity = severity_map.get(gate, "INFO")
         self._security_otel.emit_security_violation(
@@ -178,41 +192,100 @@ class SecurityGateway:
             )
             raise
 
-        # Gate 1.5: HITL approval gate (runs only when configured)
-        if self._hitl_config and self._hitl_config.needs_approval(tool_name):
+        # Gate 1.75 pre-compute: check frequency anomaly BEFORE HITL prompt so
+        # anomaly context can be merged into the HITL banner (ANOM-01)
+        freq_result = None
+        anomaly_context = None
+        if self._anomaly_freq is not None:
+            freq_result = self._anomaly_freq.record_and_check(
+                caller_id=effective_caller_id or agent_role,
+                value=1.0,
+                tool_name=tool_name,
+            )
+            if freq_result.level == ResponseLevel.BLOCK:
+                # Fail-closed auto-deny — no HITL prompt
+                self._audit.send({
+                    "event_type": "anomaly_blocked",
+                    "metric_type": "frequency",
+                    "z_score": freq_result.z_score,
+                    "baseline": freq_result.baseline,
+                    "observed": freq_result.observed,
+                    "tool_name": tool_name,
+                    "caller_id": effective_caller_id,
+                })
+                self._emit_violation(
+                    "anomaly", tool_name, agent_role,
+                    caller_id=effective_caller_id, hop_depth=effective_hop_depth,
+                )
+                raise AnomalyBlockedError(
+                    gate="anomaly",
+                    blocked=tool_name,
+                    rule=f"z={freq_result.z_score:.2f}>block_z={self._anomaly_freq._config.block_z}",
+                )
+            elif freq_result.level == ResponseLevel.ESCALATE:
+                recent = self._anomaly_freq.get_recent_calls(effective_caller_id or agent_role)
+                anomaly_context = {
+                    "metric_type": "frequency",
+                    "z_score": freq_result.z_score,
+                    "baseline": freq_result.baseline,
+                    "observed": freq_result.observed,
+                    "recent_calls": recent,
+                }
+
+        # Gate 1.5: HITL approval gate — merges anomaly context when both fire
+        needs_hitl = bool(self._hitl_config and self._hitl_config.needs_approval(tool_name))
+        needs_anomaly_hitl = anomaly_context is not None
+
+        if needs_hitl or needs_anomaly_hitl:
+            hitl_cfg = self._hitl_config or HITLConfig()
             try:
-                HITLGate(self._hitl_config).check(
+                HITLGate(hitl_cfg).check(
                     tool_name=tool_name,
                     tool_input=tool_input,
                     caller_id=effective_caller_id,
                     hop_depth=effective_hop_depth,
                     max_depth=max_depth,
+                    anomaly_context=anomaly_context,
                 )
-                # Approved — log the decision before continuing to Gate 2
-                self._audit.send(
-                    {
-                        "event_type": "hitl_decision",
-                        "approved": True,
-                        "tool_name": tool_name,
-                        "tool_input": tool_input,
-                    }
-                )
+                if needs_hitl:
+                    # Approved — log the decision before continuing to Gate 2
+                    self._audit.send(
+                        {
+                            "event_type": "hitl_decision",
+                            "approved": True,
+                            "tool_name": tool_name,
+                            "tool_input": tool_input,
+                        }
+                    )
             except ApprovalDeniedError as exc:
                 # Denied — log the decision before re-raising
-                self._audit.send(
-                    {
-                        "event_type": "hitl_decision",
-                        "approved": False,
-                        "timed_out": exc.timed_out,
-                        "tool_name": tool_name,
-                        "tool_input": tool_input,
-                    }
-                )
+                if needs_hitl:
+                    self._audit.send(
+                        {
+                            "event_type": "hitl_decision",
+                            "approved": False,
+                            "timed_out": exc.timed_out,
+                            "tool_name": tool_name,
+                            "tool_input": tool_input,
+                        }
+                    )
                 self._emit_violation(
                     "hitl", tool_name, agent_role,
                     caller_id=effective_caller_id, hop_depth=effective_hop_depth,
                 )
                 raise
+
+        # After HITL, handle WARN level (log-only, no interruption)
+        if freq_result is not None and freq_result.level == ResponseLevel.WARN:
+            self._audit.send({
+                "event_type": "anomaly_warn",
+                "metric_type": "frequency",
+                "z_score": freq_result.z_score,
+                "baseline": freq_result.baseline,
+                "observed": freq_result.observed,
+                "tool_name": tool_name,
+                "caller_id": effective_caller_id,
+            })
 
         # Gate 2: Audit pre-call (hard stop — fail-closed)
         self._audit.send(

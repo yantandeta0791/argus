@@ -56,19 +56,44 @@ class HITLGate:
         caller_id: str | None = None,
         hop_depth: int = 0,
         max_depth: int = 3,
+        anomaly_context: dict | None = None,
     ) -> None:
         """Prompt for approval if this tool requires it.
 
         caller_id, hop_depth, and max_depth are optional MAGNT parameters for
         displaying sub-agent delegation context in the approval banner.
 
+        anomaly_context: optional ANOM-01 dict from Gate 1.75/5.5. When provided,
+        an [ARGUS ANOMALY] banner is printed before the tool input JSON. The gate
+        fires even if tool is not in require_approval (anomaly-only escalation path).
+
         Returns None on approval.
         Raises ApprovalDeniedError on deny, timeout, or two invalid inputs.
         """
         from argus.security.exceptions import ApprovalDeniedError
 
-        if not self._config.needs_approval(tool_name):
+        # Gate fires if tool requires approval OR if anomaly context forces escalation
+        if not self._config.needs_approval(tool_name) and anomaly_context is None:
             return None
+
+        # Print anomaly banner BEFORE the HITL tool banner and JSON input
+        if anomaly_context is not None:
+            metric_type = anomaly_context.get("metric_type", "frequency")
+            z_score = anomaly_context.get("z_score", 0.0)
+            baseline = anomaly_context.get("baseline", 0.0)
+            observed = anomaly_context.get("observed", 0.0)
+            recent_calls = anomaly_context.get("recent_calls", [])
+
+            spike_label = "Frequency spike" if metric_type == "frequency" else "Egress volume spike"
+            print(f"\n[ARGUS ANOMALY] {spike_label} detected")
+            print(f"Rate: {observed} calls/window | Baseline: {baseline:.2f} | Z-score: {z_score:.2f}")
+            if recent_calls:
+                import time as _time
+                now = _time.monotonic()
+                formatted = ", ".join(
+                    f"{name} @ -{now - ts:.1f}s" for name, ts in recent_calls
+                )
+                print(f"Last {len(recent_calls)} calls: {formatted}")
 
         # Print the HITL banner so the operator can make an informed decision
         print(f"\n[ARGUS HITL] Approval required for tool '{tool_name}'")
