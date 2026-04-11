@@ -284,3 +284,135 @@ def test_load_hitl_config_parses_timeout():
 
     # No tools or hitl sections → return None (no HITL config needed)
     assert load_hitl_config({}) is None
+
+
+# ---------------------------------------------------------------------------
+# Phase 10 Plan 02: HITLGate anomaly_context parameter tests
+# ---------------------------------------------------------------------------
+
+
+class TestHITLGateAnomalyContext:
+    """Tests for anomaly_context parameter in HITLGate.check()."""
+
+    def _make_anomaly_context(self, metric_type="frequency"):
+        return {
+            "metric_type": metric_type,
+            "z_score": 3.5,
+            "baseline": 2.0,
+            "observed": 8.0,
+            "recent_calls": [("search", 100.0), ("read_file", 95.0)],
+        }
+
+    def test_anomaly_context_banner_printed(self, capsys):
+        """ANOM: when anomaly_context is provided, check() prints [ARGUS ANOMALY] banner
+        with rate, baseline, z-score before the tool input JSON."""
+        config = HITLConfig(require_approval={"delete_file": True}, timeout_seconds=None)
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            gate.check(
+                tool_name="delete_file",
+                tool_input={"path": "/tmp/x"},
+                anomaly_context=self._make_anomaly_context(),
+            )
+
+        captured = capsys.readouterr()
+        assert "[ARGUS ANOMALY]" in captured.out
+        assert "3.5" in captured.out   # z_score
+        assert "2.0" in captured.out   # baseline
+        assert "8.0" in captured.out   # observed rate
+
+    def test_anomaly_context_shows_recent_calls(self, capsys):
+        """ANOM: anomaly banner includes last 5 calls (tool_name @ relative_time)."""
+        config = HITLConfig(require_approval={"search": True}, timeout_seconds=None)
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            gate.check(
+                tool_name="search",
+                tool_input={"q": "test"},
+                anomaly_context=self._make_anomaly_context(),
+            )
+
+        captured = capsys.readouterr()
+        assert "search" in captured.out
+        assert "read_file" in captured.out
+
+    def test_anomaly_context_banner_before_tool_input(self, capsys):
+        """ANOM: anomaly banner appears BEFORE tool input JSON in output."""
+        config = HITLConfig(require_approval={"search": True}, timeout_seconds=None)
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            gate.check(
+                tool_name="search",
+                tool_input={"q": "my_query"},
+                anomaly_context=self._make_anomaly_context(),
+            )
+
+        captured = capsys.readouterr()
+        anomaly_pos = captured.out.find("[ARGUS ANOMALY]")
+        input_pos = captured.out.find("my_query")
+        assert anomaly_pos < input_pos, "Anomaly banner must appear before tool input JSON"
+
+    def test_anomaly_context_fires_without_require_approval(self, capsys):
+        """ANOM: when anomaly_context is provided but tool not in require_approval,
+        HITL prompt still fires (anomaly-only escalation path)."""
+        # Tool is NOT in require_approval
+        config = HITLConfig(require_approval={}, timeout_seconds=None)
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            # Should not raise and should prompt (anomaly context forces prompt)
+            result = gate.check(
+                tool_name="search",
+                tool_input={"q": "test"},
+                anomaly_context=self._make_anomaly_context(),
+            )
+
+        assert result is None
+        captured = capsys.readouterr()
+        assert "[ARGUS ANOMALY]" in captured.out
+
+    def test_anomaly_context_with_delegation_shows_delegation_line(self, capsys):
+        """ANOM + MAGNT: when anomaly_context AND hop_depth > 0, banner includes delegation context."""
+        config = HITLConfig(require_approval={"search": True}, timeout_seconds=None)
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            gate.check(
+                tool_name="search",
+                tool_input={"q": "test"},
+                caller_id="supervisor",
+                hop_depth=2,
+                max_depth=3,
+                anomaly_context=self._make_anomaly_context(),
+            )
+
+        captured = capsys.readouterr()
+        assert "[ARGUS ANOMALY]" in captured.out
+        assert "Delegated by: supervisor (hop 2/3)" in captured.out
+
+    def test_no_anomaly_context_no_anomaly_banner(self, capsys):
+        """ANOM: when anomaly_context is None (not provided), no [ARGUS ANOMALY] banner printed."""
+        config = HITLConfig(require_approval={"delete_file": True}, timeout_seconds=None)
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="approve"):
+            gate.check(tool_name="delete_file", tool_input={"path": "/tmp/x"})
+
+        captured = capsys.readouterr()
+        assert "[ARGUS ANOMALY]" not in captured.out
+
+    def test_anomaly_context_deny_raises_approval_denied(self):
+        """ANOM: when anomaly HITL prompt is denied, ApprovalDeniedError is raised."""
+        config = HITLConfig(require_approval={}, timeout_seconds=None)
+        gate = HITLGate(config=config)
+
+        with patch("builtins.input", return_value="deny"):
+            with pytest.raises(ApprovalDeniedError):
+                gate.check(
+                    tool_name="search",
+                    tool_input={},
+                    anomaly_context=self._make_anomaly_context(),
+                )

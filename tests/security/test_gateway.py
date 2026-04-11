@@ -587,3 +587,204 @@ def test_gate05_no_agents_config_no_depth_error():
             caller_id="some_agent",
             hop_depth=4,
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 10 Plan 02: Gate 1.75 — Frequency anomaly detection
+# ---------------------------------------------------------------------------
+
+
+class TestGate175FrequencyAnomaly:
+    """Gate 1.75 tests: frequency anomaly detection via AnomalyDetector in pre_tool_call."""
+
+    def _make_gateway(self, with_anomaly=True, with_hitl=False):
+        from argus.security.gateway import SecurityGateway, GatewayConfig
+        from argus.security.audit.logger import AuditLogger
+        from argus.security.anomaly.detector import AnomalyConfig
+
+        mock_audit = MagicMock(spec=AuditLogger)
+        anomaly_cfg = AnomalyConfig() if with_anomaly else None
+        hitl_cfg = HITLConfig(require_approval={"search": True}) if with_hitl else None
+        config = GatewayConfig(anomaly=anomaly_cfg, hitl=hitl_cfg)
+        gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+        return gateway, mock_audit
+
+    def test_gate175_block_raises_anomaly_blocked_error(self):
+        """Gate 1.75: when AnomalyDetector returns BLOCK, pre_tool_call raises AnomalyBlockedError."""
+        from argus.security.exceptions import AnomalyBlockedError
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, _ = self._make_gateway()
+
+        block_result = AnomalyResult(
+            level=ResponseLevel.BLOCK, z_score=5.0, baseline=1.0, observed=10.0
+        )
+        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=block_result):
+            with pytest.raises(AnomalyBlockedError):
+                gateway.pre_tool_call("analyst", "search", {"q": "test"})
+
+    def test_gate175_block_sends_audit_event(self):
+        """Gate 1.75: BLOCK sends audit event with metric_type, z_score, baseline, observed."""
+        from argus.security.exceptions import AnomalyBlockedError
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, mock_audit = self._make_gateway()
+
+        block_result = AnomalyResult(
+            level=ResponseLevel.BLOCK, z_score=5.0, baseline=1.0, observed=10.0
+        )
+        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=block_result):
+            with pytest.raises(AnomalyBlockedError):
+                gateway.pre_tool_call("analyst", "search", {"q": "test"}, caller_id="agent-x")
+
+        sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
+        anomaly_events = [e for e in sent_calls if e.get("event_type") == "anomaly_blocked"]
+        assert len(anomaly_events) == 1
+        ev = anomaly_events[0]
+        assert ev["metric_type"] == "frequency"
+        assert ev["z_score"] == 5.0
+        assert ev["baseline"] == 1.0
+        assert ev["observed"] == 10.0
+
+    def test_gate175_block_emits_otel_violation(self):
+        """Gate 1.75: BLOCK calls _emit_violation('anomaly', ...) with caller_id and hop_depth."""
+        from argus.security.exceptions import AnomalyBlockedError
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+        from argus.security.audit.logger import AuditLogger
+
+        mock_audit = MagicMock(spec=AuditLogger)
+        mock_otel = MagicMock()
+        from argus.security.gateway import SecurityGateway, GatewayConfig
+        from argus.security.anomaly.detector import AnomalyConfig
+
+        config = GatewayConfig(anomaly=AnomalyConfig())
+        gateway = SecurityGateway(config=config, audit_logger=mock_audit, security_otel=mock_otel)
+
+        block_result = AnomalyResult(
+            level=ResponseLevel.BLOCK, z_score=5.0, baseline=1.0, observed=10.0
+        )
+        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=block_result):
+            with pytest.raises(AnomalyBlockedError):
+                gateway.pre_tool_call(
+                    "analyst", "search", {}, caller_id="agent-x", hop_depth=1
+                )
+
+        kw = mock_otel.emit_security_violation.call_args[1]
+        assert kw["event_type"] == "anomaly"
+        assert kw["caller_id"] == "agent-x"
+        assert kw["hop_depth"] == 1
+        assert kw["severity"] == "HIGH"
+
+    def test_gate175_escalate_calls_hitl_with_anomaly_context(self):
+        """Gate 1.75: ESCALATE calls HITLGate.check() with anomaly_context containing z_score, baseline, observed."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, _ = self._make_gateway()
+
+        escalate_result = AnomalyResult(
+            level=ResponseLevel.ESCALATE, z_score=3.5, baseline=2.0, observed=8.0
+        )
+        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=escalate_result):
+            with patch.object(gateway._anomaly_freq, "get_recent_calls", return_value=[("search", 1.0)]):
+                with patch("argus.security.gateway.HITLGate") as MockHITL:
+                    MockHITL.return_value.check.return_value = None
+                    gateway.pre_tool_call("analyst", "search", {}, caller_id="agent-x")
+
+        call_kwargs = MockHITL.return_value.check.call_args[1]
+        assert "anomaly_context" in call_kwargs
+        ctx = call_kwargs["anomaly_context"]
+        assert ctx["z_score"] == 3.5
+        assert ctx["baseline"] == 2.0
+        assert ctx["observed"] == 8.0
+        assert ctx["metric_type"] == "frequency"
+
+    def test_gate175_warn_sends_audit_event_no_exception(self):
+        """Gate 1.75: WARN sends audit event with event_type='anomaly_warn', no exception raised."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, mock_audit = self._make_gateway()
+
+        warn_result = AnomalyResult(
+            level=ResponseLevel.WARN, z_score=2.5, baseline=1.0, observed=3.0
+        )
+        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=warn_result):
+            # Should NOT raise
+            gateway.pre_tool_call("analyst", "search", {}, caller_id="agent-x")
+
+        sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
+        warn_events = [e for e in sent_calls if e.get("event_type") == "anomaly_warn"]
+        assert len(warn_events) == 1
+        ev = warn_events[0]
+        assert ev["metric_type"] == "frequency"
+        assert ev["z_score"] == 2.5
+
+    def test_gate175_ok_no_audit_event_no_exception(self):
+        """Gate 1.75: OK level sends no anomaly audit event and raises no exception."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, mock_audit = self._make_gateway()
+
+        ok_result = AnomalyResult(
+            level=ResponseLevel.OK, z_score=0.5, baseline=1.0, observed=1.2
+        )
+        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=ok_result):
+            gateway.pre_tool_call("analyst", "search", {})
+
+        sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
+        anomaly_events = [e for e in sent_calls if "anomaly" in e.get("event_type", "")]
+        assert len(anomaly_events) == 0
+
+    def test_gate175_none_config_gate_skipped(self):
+        """Gate 1.75: when anomaly config is None, gate is completely skipped."""
+        gateway, mock_audit = self._make_gateway(with_anomaly=False)
+
+        assert not hasattr(gateway, "_anomaly_freq") or gateway._anomaly_freq is None
+
+        # No exception should be raised and no anomaly audit events
+        gateway.pre_tool_call("analyst", "search", {})
+        sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
+        anomaly_events = [e for e in sent_calls if "anomaly" in e.get("event_type", "")]
+        assert len(anomaly_events) == 0
+
+    def test_gate175_hitl_merge_single_prompt_when_both_fire(self):
+        """Gate 1.75 + Gate 1.5 merge: when both require_approval AND escalate_z fire,
+        only ONE HITLGate.check() call is made with anomaly_context populated."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, _ = self._make_gateway(with_anomaly=True, with_hitl=True)
+
+        escalate_result = AnomalyResult(
+            level=ResponseLevel.ESCALATE, z_score=3.5, baseline=2.0, observed=8.0
+        )
+        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=escalate_result):
+            with patch.object(gateway._anomaly_freq, "get_recent_calls", return_value=[]):
+                with patch("argus.security.gateway.HITLGate") as MockHITL:
+                    MockHITL.return_value.check.return_value = None
+                    gateway.pre_tool_call("analyst", "search", {})
+
+        # Should be exactly ONE HITLGate instantiation + check call
+        assert MockHITL.call_count == 1
+        assert MockHITL.return_value.check.call_count == 1
+        # anomaly_context must be set
+        call_kwargs = MockHITL.return_value.check.call_args[1]
+        assert call_kwargs.get("anomaly_context") is not None
+
+    def test_gate175_severity_map_includes_anomaly_high(self):
+        """Gate 1.75: severity_map includes 'anomaly': 'HIGH' for OTel emission."""
+        from argus.security.audit.logger import AuditLogger
+        from argus.security.gateway import SecurityGateway, GatewayConfig
+
+        mock_audit = MagicMock(spec=AuditLogger)
+        mock_otel = MagicMock()
+        config = GatewayConfig()
+        gateway = SecurityGateway(config=config, audit_logger=mock_audit, security_otel=mock_otel)
+
+        # Call _emit_violation with gate="anomaly" and verify severity is HIGH
+        gateway._emit_violation("anomaly", "some_tool", "analyst")
+        kw = mock_otel.emit_security_violation.call_args[1]
+        assert kw["severity"] == "HIGH"
+
+
+# ---------------------------------------------------------------------------
+# Phase 10 Plan 02: HITLGate anomaly_context banner tests
+# ---------------------------------------------------------------------------
