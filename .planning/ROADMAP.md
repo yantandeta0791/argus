@@ -31,7 +31,7 @@
 ### 📋 v0.4 Multi-Agent + Anomaly Detection (Planned)
 
 - [ ] **Phase 9: Multi-Agent Enforcement** - Identity propagation, per-agent RBAC, delegation depth limits, A2A audit attribution, adapter context vars
-- [ ] **Phase 10: Anomaly Detection** - Per-agent EWMA frequency + egress spike detection, HITL escalation, audit/OTel, graduated response levels
+- [x] **Phase 10: Anomaly Detection** - Per-agent EWMA frequency + egress spike detection, HITL escalation, audit/OTel, graduated response levels (completed 2026-04-11)
 
 ## Phase Details
 
@@ -62,7 +62,7 @@ Plans:
   3. Anomaly events appear in `argus audit` output and in OTel spans with `GateType.ANOMALY` — the same observability path as permission violations
   4. Developer can set `window_seconds`, `z_threshold`, `min_observations`, and `enabled` in an `anomaly:` block in argus.yaml and the detector respects these values at runtime
   5. Graduated response levels (`warn_z`, `escalate_z`, `block_z`) allow low-confidence anomalies to log-only while high-confidence anomalies escalate to HITL — reducing false-positive alert fatigue
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 10-01-PLAN.md — AnomalyDetector engine, AnomalyConfig, config loading, GateType.ANOMALY, AnomalyBlockedError
@@ -81,7 +81,7 @@ Plans:
 | 7. Audit CLI + OTel Export | v0.3 | 3/3 | Complete | 2026-03-27 |
 | 8. REST API Sidecar | v0.3 | 2/2 | Complete | 2026-03-27 |
 | 9. Multi-Agent Enforcement | v0.4 | 3/3 | Complete | — |
-| 10. Anomaly Detection | 1/2 | In Progress|  | — |
+| 10. Anomaly Detection | 2/2 | Complete   | 2026-04-11 | — |
 
 ---
 *Roadmap last updated: 2026-04-10 after Phase 10 planning*

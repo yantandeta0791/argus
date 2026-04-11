@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Multi-Agent + Anomaly Detection
 status: completed
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-04-11T00:29:58.426Z"
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-04-11T00:36:47.031Z"
 last_activity: 2026-04-09 — Phase 09 Plan 03 (adapter identity propagation + REST sidecar) complete
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 100
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-08)
 
 ## Current Position
 
-Phase: 09-multi-agent-enforcement
-Plan: 3/3 complete
-Status: Complete — Phase 09 all plans done
+Phase: 10-anomaly-detection
+Plan: 2/2 complete
+Status: Complete — Phase 10 all plans done
 Last activity: 2026-04-09 — Phase 09 Plan 03 (adapter identity propagation + REST sidecar) complete
 
 Progress: [██████████] 100%
@@ -110,11 +110,16 @@ Progress: [██████████] 100%
 | z-score uses pre-update EWMA and prior window (10-01) | Prevents spike from inflating its own denominator — ensures 100x spike against stable baseline returns BLOCK not WARN |
 | stdev=0 with deviation → BLOCK (10-01) | Perfectly stable baseline means any deviation is maximally anomalous; stdev=0 with value==baseline → OK edge case preserved |
 | AnomalyDetector NOT thread-safe (10-01) | Per-agent state is in-process dict; single-worker enforcement required when anomaly gate enabled (REST sidecar constraint) |
+| Phase 10-anomaly-detection P02 | 274 | 2 tasks | 4 files |
+| Gate 1.75 pre-computes anomaly before Gate 1.5 HITL (10-02) | Single merged HITL prompt when both require_approval and escalate_z fire — avoids two separate prompts for same call |
+| Gate 5.5 uses output replacement not exception on egress BLOCK (10-02) | post_tool_call contract always returns str; BLOCK replaces output with placeholder without raising |
+| HITLGate anomaly-only escalation: gate fires when anomaly_context present even if needs_approval is False (10-02) | Anomaly escalation must reach human even for tools not in require_approval list |
+| hitl_decision audit event only logged when needs_hitl True (10-02) | Anomaly-only HITL paths do not produce spurious hitl_decision entries |
 
 ## Session Continuity
 
-Next action: Execute Phase 10 Plan 02 — Wire AnomalyDetector into SecurityGateway Gate 1.75
-Stopped at: Completed 10-01-PLAN.md
+Next action: Phase 10 complete — v0.4 anomaly detection enforcement done
+Stopped at: Completed 10-02-PLAN.md
 Roadmap: .planning/ROADMAP.md
 Requirements: .planning/REQUIREMENTS.md
 
