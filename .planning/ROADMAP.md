@@ -45,7 +45,7 @@
   3. Each agent declared in `agents:` in argus.yaml gets its own role and permission scope; a worker agent calling a tool allowed only for supervisors is denied
   4. A supervisor→worker tool call made via the CrewAI or LangChain adapter propagates agent identity automatically via `contextvars` without the developer manually threading `caller_id`
   5. The HITL terminal banner for a sub-agent tool call shows the originating supervisor name and current hop depth alongside the tool arguments
-**Plans:** 1/3 plans executed
+**Plans:** 3 plans
 
 Plans:
 - [ ] 09-01-PLAN.md — Identity infrastructure: ContextVars, AgentRegistry, DelegationDepthError, config parser
@@ -62,7 +62,11 @@ Plans:
   3. Anomaly events appear in `argus audit` output and in OTel spans with `GateType.ANOMALY` — the same observability path as permission violations
   4. Developer can set `window_seconds`, `z_threshold`, `min_observations`, and `enabled` in an `anomaly:` block in argus.yaml and the detector respects these values at runtime
   5. Graduated response levels (`warn_z`, `escalate_z`, `block_z`) allow low-confidence anomalies to log-only while high-confidence anomalies escalate to HITL — reducing false-positive alert fatigue
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — AnomalyDetector engine, AnomalyConfig, config loading, GateType.ANOMALY, AnomalyBlockedError
+- [ ] 10-02-PLAN.md — Gate 1.75 + Gate 5.5 in SecurityGateway, HITL escalation merge, audit/OTel integration
 
 ## Progress
 
@@ -76,8 +80,8 @@ Plans:
 | 6. Policy-as-Code | v0.3 | 3/3 | Complete | 2026-03-27 |
 | 7. Audit CLI + OTel Export | v0.3 | 3/3 | Complete | 2026-03-27 |
 | 8. REST API Sidecar | v0.3 | 2/2 | Complete | 2026-03-27 |
-| 9. Multi-Agent Enforcement | 1/3 | In Progress|  | — |
-| 10. Anomaly Detection | v0.4 | 0/? | Not started | — |
+| 9. Multi-Agent Enforcement | v0.4 | 3/3 | Complete | — |
+| 10. Anomaly Detection | v0.4 | 0/2 | Not started | — |
 
 ---
-*Roadmap last updated: 2026-04-09 after Phase 9 planning*
+*Roadmap last updated: 2026-04-10 after Phase 10 planning*
