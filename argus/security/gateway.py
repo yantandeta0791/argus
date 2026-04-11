@@ -335,6 +335,74 @@ class SecurityGateway:
         if clean_output != tool_output:
             self._emit_violation("redaction", None, None)
 
+        # Gate 5.5: Egress volume anomaly check (ANOM-02)
+        if self._anomaly_egress is not None:
+            # Resolve caller identity from ContextVars for per-agent egress tracking
+            ctx_caller_id_post, ctx_hop_depth_post = get_caller_context()
+            egress_caller = ctx_caller_id_post or "unknown"
+
+            egress_result = self._anomaly_egress.record_and_check(
+                caller_id=egress_caller,
+                value=float(len(clean_output)),
+                tool_name="[egress]",
+            )
+            if egress_result.level == ResponseLevel.BLOCK:
+                self._audit.send({
+                    "event_type": "anomaly_blocked",
+                    "metric_type": "egress",
+                    "z_score": egress_result.z_score,
+                    "baseline": egress_result.baseline,
+                    "observed": egress_result.observed,
+                    "caller_id": egress_caller,
+                })
+                self._emit_violation(
+                    "anomaly", None, None,
+                    caller_id=egress_caller, hop_depth=ctx_hop_depth_post,
+                )
+                clean_output = "[ANOMALY: output suppressed]"
+            elif egress_result.level == ResponseLevel.ESCALATE:
+                recent = self._anomaly_egress.get_recent_calls(egress_caller)
+                egress_anomaly_ctx = {
+                    "metric_type": "egress",
+                    "z_score": egress_result.z_score,
+                    "baseline": egress_result.baseline,
+                    "observed": egress_result.observed,
+                    "recent_calls": recent,
+                }
+                hitl_cfg = self._hitl_config or HITLConfig()
+                try:
+                    HITLGate(hitl_cfg).check(
+                        tool_name="[egress-volume]",
+                        tool_input={"output_length": len(clean_output)},
+                        caller_id=egress_caller,
+                        hop_depth=ctx_hop_depth_post,
+                        anomaly_context=egress_anomaly_ctx,
+                    )
+                except ApprovalDeniedError:
+                    self._audit.send({
+                        "event_type": "anomaly_blocked",
+                        "metric_type": "egress",
+                        "z_score": egress_result.z_score,
+                        "baseline": egress_result.baseline,
+                        "observed": egress_result.observed,
+                        "caller_id": egress_caller,
+                        "denied_by": "hitl",
+                    })
+                    self._emit_violation(
+                        "anomaly", None, None,
+                        caller_id=egress_caller, hop_depth=ctx_hop_depth_post,
+                    )
+                    clean_output = "[ANOMALY: output suppressed]"
+            elif egress_result.level == ResponseLevel.WARN:
+                self._audit.send({
+                    "event_type": "anomaly_warn",
+                    "metric_type": "egress",
+                    "z_score": egress_result.z_score,
+                    "baseline": egress_result.baseline,
+                    "observed": egress_result.observed,
+                    "caller_id": egress_caller,
+                })
+
         # Gate 5: Egress allowlist check (log-only in v1)
         if skill_manifest is not None:
             egress_list = getattr(skill_manifest, "egress_allowlist", []) or []
