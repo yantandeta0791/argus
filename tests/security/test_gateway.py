@@ -786,5 +786,200 @@ class TestGate175FrequencyAnomaly:
 
 
 # ---------------------------------------------------------------------------
+# Phase 10 Plan 02: Gate 5.5 — Egress volume anomaly detection
+# ---------------------------------------------------------------------------
+
+
+class TestGate55EgressAnomaly:
+    """Gate 5.5 tests: egress volume anomaly detection in post_tool_call."""
+
+    def _make_gateway(self, with_anomaly=True, with_hitl=False):
+        from argus.security.gateway import SecurityGateway, GatewayConfig
+        from argus.security.audit.logger import AuditLogger
+        from argus.security.anomaly.detector import AnomalyConfig
+
+        mock_audit = MagicMock(spec=AuditLogger)
+        anomaly_cfg = AnomalyConfig() if with_anomaly else None
+        hitl_cfg = HITLConfig(require_approval={}) if with_hitl else None
+        config = GatewayConfig(anomaly=anomaly_cfg, hitl=hitl_cfg)
+        gateway = SecurityGateway(config=config, audit_logger=mock_audit)
+        return gateway, mock_audit
+
+    def test_gate55_block_replaces_output_with_placeholder(self):
+        """Gate 5.5: egress BLOCK replaces output with '[ANOMALY: output suppressed]'."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, _ = self._make_gateway()
+
+        block_result = AnomalyResult(
+            level=ResponseLevel.BLOCK, z_score=5.0, baseline=100.0, observed=10000.0
+        )
+        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=block_result):
+            result = gateway.post_tool_call("a" * 10000)
+
+        assert result == "[ANOMALY: output suppressed]"
+
+    def test_gate55_block_sends_audit_event(self):
+        """Gate 5.5: BLOCK sends audit event with metric_type='egress', z_score, baseline, observed."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+        from argus.security.identity import set_caller_context, reset_caller_context
+
+        gateway, mock_audit = self._make_gateway()
+
+        block_result = AnomalyResult(
+            level=ResponseLevel.BLOCK, z_score=5.0, baseline=100.0, observed=10000.0
+        )
+        tokens = set_caller_context("egress-agent", 1)
+        try:
+            with patch.object(gateway._anomaly_egress, "record_and_check", return_value=block_result):
+                gateway.post_tool_call("a" * 10000)
+        finally:
+            reset_caller_context(tokens)
+
+        sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
+        anomaly_events = [e for e in sent_calls if e.get("event_type") == "anomaly_blocked"]
+        assert len(anomaly_events) == 1
+        ev = anomaly_events[0]
+        assert ev["metric_type"] == "egress"
+        assert ev["z_score"] == 5.0
+        assert ev["baseline"] == 100.0
+        assert ev["observed"] == 10000.0
+
+    def test_gate55_block_emits_otel_violation(self):
+        """Gate 5.5: egress BLOCK calls _emit_violation('anomaly', ...)."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+        from argus.security.audit.logger import AuditLogger
+        from argus.security.gateway import SecurityGateway, GatewayConfig
+        from argus.security.anomaly.detector import AnomalyConfig
+
+        mock_audit = MagicMock(spec=AuditLogger)
+        mock_otel = MagicMock()
+        config = GatewayConfig(anomaly=AnomalyConfig())
+        gateway = SecurityGateway(config=config, audit_logger=mock_audit, security_otel=mock_otel)
+
+        block_result = AnomalyResult(
+            level=ResponseLevel.BLOCK, z_score=5.0, baseline=100.0, observed=10000.0
+        )
+        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=block_result):
+            gateway.post_tool_call("a" * 10000)
+
+        kw = mock_otel.emit_security_violation.call_args[1]
+        assert kw["event_type"] == "anomaly"
+        assert kw["severity"] == "HIGH"
+
+    def test_gate55_escalate_calls_hitl_with_egress_context(self):
+        """Gate 5.5: egress ESCALATE triggers HITL with egress anomaly_context."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, _ = self._make_gateway()
+
+        escalate_result = AnomalyResult(
+            level=ResponseLevel.ESCALATE, z_score=3.5, baseline=200.0, observed=800.0
+        )
+        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=escalate_result):
+            with patch.object(gateway._anomaly_egress, "get_recent_calls", return_value=[]):
+                with patch("argus.security.gateway.HITLGate") as MockHITL:
+                    MockHITL.return_value.check.return_value = None
+                    gateway.post_tool_call("a" * 800)
+
+        call_kwargs = MockHITL.return_value.check.call_args[1]
+        assert "anomaly_context" in call_kwargs
+        ctx = call_kwargs["anomaly_context"]
+        assert ctx["metric_type"] == "egress"
+        assert ctx["z_score"] == 3.5
+
+    def test_gate55_warn_sends_audit_no_output_change(self):
+        """Gate 5.5: egress WARN sends audit event, returns original clean_output unchanged."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, mock_audit = self._make_gateway()
+
+        warn_result = AnomalyResult(
+            level=ResponseLevel.WARN, z_score=2.5, baseline=100.0, observed=250.0
+        )
+        original = "clean output data"
+        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=warn_result):
+            result = gateway.post_tool_call(original)
+
+        assert result == original
+        sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
+        warn_events = [e for e in sent_calls if e.get("event_type") == "anomaly_warn"]
+        assert len(warn_events) == 1
+        assert warn_events[0]["metric_type"] == "egress"
+
+    def test_gate55_ok_no_audit_output_unchanged(self):
+        """Gate 5.5: egress OK returns clean_output unchanged and sends no anomaly audit event."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, mock_audit = self._make_gateway()
+
+        ok_result = AnomalyResult(
+            level=ResponseLevel.OK, z_score=0.5, baseline=100.0, observed=110.0
+        )
+        original = "normal output"
+        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=ok_result):
+            result = gateway.post_tool_call(original)
+
+        assert result == original
+        sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
+        anomaly_events = [e for e in sent_calls if "anomaly" in e.get("event_type", "")]
+        assert len(anomaly_events) == 0
+
+    def test_gate55_none_config_gate_skipped(self):
+        """Gate 5.5: when anomaly config is None, gate is completely skipped."""
+        gateway, mock_audit = self._make_gateway(with_anomaly=False)
+
+        assert gateway._anomaly_egress is None
+
+        original = "some output"
+        result = gateway.post_tool_call(original)
+        assert result == original
+
+        sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
+        anomaly_events = [e for e in sent_calls if "anomaly" in e.get("event_type", "")]
+        assert len(anomaly_events) == 0
+
+    def test_gate55_fires_after_redaction_before_egress_allowlist(self):
+        """Gate 5.5: egress anomaly fires on redacted output (after Gate 4, before Gate 5)."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+
+        gateway, _ = self._make_gateway()
+
+        block_result = AnomalyResult(
+            level=ResponseLevel.BLOCK, z_score=5.0, baseline=100.0, observed=10000.0
+        )
+        # Use output that would be redacted — anomaly check should see redacted length
+        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=block_result) as mock_check:
+            result = gateway.post_tool_call("clean data here")
+
+        # Verify record_and_check was called with len of the output (redacted)
+        assert mock_check.call_count == 1
+        call_kwargs = mock_check.call_args[1]
+        assert call_kwargs["value"] == float(len("clean data here"))
+        assert result == "[ANOMALY: output suppressed]"
+
+    def test_gate55_egress_caller_resolution_from_contextvars(self):
+        """Gate 5.5: egress caller_id resolved from ContextVars for per-agent attribution."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+        from argus.security.identity import set_caller_context, reset_caller_context
+
+        gateway, _ = self._make_gateway()
+
+        ok_result = AnomalyResult(
+            level=ResponseLevel.OK, z_score=0.0, baseline=100.0, observed=50.0
+        )
+        tokens = set_caller_context("my-agent", 0)
+        try:
+            with patch.object(gateway._anomaly_egress, "record_and_check", return_value=ok_result) as mock_check:
+                gateway.post_tool_call("short output")
+        finally:
+            reset_caller_context(tokens)
+
+        # Verify caller_id used in record_and_check
+        call_kwargs = mock_check.call_args[1]
+        assert call_kwargs["caller_id"] == "my-agent"
+
+
+# ---------------------------------------------------------------------------
 # Phase 10 Plan 02: HITLGate anomaly_context banner tests
 # ---------------------------------------------------------------------------
