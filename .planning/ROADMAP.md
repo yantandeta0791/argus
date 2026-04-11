@@ -81,7 +81,7 @@ Plans:
 | 7. Audit CLI + OTel Export | v0.3 | 3/3 | Complete | 2026-03-27 |
 | 8. REST API Sidecar | v0.3 | 2/2 | Complete | 2026-03-27 |
 | 9. Multi-Agent Enforcement | v0.4 | 3/3 | Complete | — |
-| 10. Anomaly Detection | 2/2 | Complete   | 2026-04-11 | — |
+| 10. Anomaly Detection | 2/2 | Complete    | 2026-04-11 | — |
 
 ---
 *Roadmap last updated: 2026-04-10 after Phase 10 planning*
