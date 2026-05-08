@@ -496,26 +496,56 @@ The test suite has 206 passing tests covering all v1.0 and v1.1 requirements.
 
 ## Roadmap
 
-### v1.0 (shipped)
+### v0.1.0 (shipped)
 
-36 requirements across 8 phases. Security foundation, execution engine, LLM cost router, memory, skill architecture, Tier 1 skills, observability, CLI.
+Initial bootstrap. Security foundation, 5-state execution engine, LLM cost router, working + episodic memory, skill architecture with SHA-256 verification, Tier 1 skills (Security Audit, OWASP Agentic Top 10, Credential Scanner), observability (JSONL trace + OTel spans), CLI (`argus demo` / `run` / `scan`).
 
-### v1.1 (current)
+### v0.2.0 — Security Foundation + LangChain (shipped 2026-03-08)
 
-- Real AuditDaemon subprocess manager (SEC-02 complete)
-- LangChain adapter with proxy-based security enforcement
-- SkillLifecycleManager verification wired into `argus scan`
-- GitHub Actions CI, Docker deployment, community infrastructure
-- 30 stale xfail markers removed, 206 tests passing
+- Real `AuditDaemon` subprocess manager — out-of-process audit log a compromised agent cannot silence
+- LangChain adapter using the proxy pattern — fail-closed at the `invoke()` boundary
+- `SkillLifecycleManager` verification wired into `argus scan`
+- Multi-stage Dockerfile + docker-compose
+- GitHub Actions CI (pytest 3.12/3.13 + ruff)
+- 206 tests passing
 
-### v2 (planned)
+### v0.3 — Framework Adapters + Operationalization (shipped 2026-03-28)
 
+- CrewAI adapter (`wrap_tools()`, fail-closed, lazy import)
+- AutoGen adapter (async-native, FunctionTool + plain callable support)
+- MCP server wrapper (`ArgusMCPMiddleware`, duck-typed, `fastmcp` optional extra)
+- Human-in-the-loop terminal gates (Gate 1.5 — approve / deny / timeout, audit-logged)
+- Policy-as-code: full `argus.yaml` configuration (RBAC, secrets, egress, HITL, spend profiles) via single `load_gateway_config()`
+- `argus audit` CLI with Rich panels, streaming JSONL read, filter flags
+- OTel violation spans to Datadog / Grafana / OTLP via single `OTLPSpanExporter`
+- REST API sidecar (`argus serve`, `/tool-call`, FastAPI) — enables non-Python agents
+- 24/24 v0.3 requirements shipped
+
+### v0.4 — Multi-Agent + Anomaly Detection (shipped 2026-04-20)
+
+- Multi-agent identity infrastructure: `ContextVars`, `AgentRegistry`, `DelegationDepthError`, Gate 0.5
+- Per-agent RBAC via `agents:` in `argus.yaml` with `max_delegation_depth` fail-closed
+- Auto identity propagation in LangChain and CrewAI adapters via token-based finally-reset
+- REST sidecar identity fields (`caller_id`, `hop_depth` on `ToolCallRequest`)
+- HITL sub-agent banner showing the delegation chain
+- OTel identity attributes (`argus.security.caller_id` / `hop_depth`) on all violation spans
+- Anomaly detection engine: per-agent EWMA + z-score sliding windows, stdlib-only
+- Gate 1.75 (pre-call frequency) + Gate 5.5 (post-call egress) with graduated response (`warn_z` / `escalate_z` / `block_z`)
+- `anomaly_blocked` / `anomaly_warn` audit events + `GateType.ANOMALY` OTel spans
+- 13/13 v0.4 requirements shipped (4 with integration debt carried to v0.5)
+
+### v0.5 (planned)
+
+- Provenance-aware execution: tag retrieval-derived content at the adapter boundary, gate write/export tools by instruction provenance
+- Anomaly baseline persistence to SQLite across restarts (`ANOM-08`)
+- Tool sequence / Markov anomaly detection for unusual tool combinations (`ANOM-07`)
+- LlamaIndex adapter (`ADPT-08`)
+- AutoGen + MCP adapter `ContextVar` propagation (`MAGNT-08`)
+- Webhook HITL approval (`HITL-06`)
+- v0.4 integration debt closure: `hop_depth` in anomaly audit emissions, Gate 5.5 `max_depth` forwarding, REST sidecar anomaly-`ESCALATE` guard, Nyquist sign-off for Phases 9–10
 - Redis hot memory layer + Qdrant semantic memory
 - OCI skill registry via `oras-py`
-- `argus serve` REST API mode
 - Local model support via LiteLLM / Ollama
-- Human-in-the-loop approval gates for high-risk tool calls
-- CrewAI / AutoGen adapters
 
 ## License
 
