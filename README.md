@@ -98,24 +98,7 @@ The run produces a JSONL execution trace at `./runs/trace.jsonl` and a security 
 
 Argus is built in four layers, each depending only on the layers below it.
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│                                  CLI / Demo Surface                                      │
-│                       argus demo  │  argus run  │  argus scan                            │
-├──────────────────────────────────────────────────────────────────────────────────────────┤
-│                                  Observability Layer                                     │
-│                   TraceWriter (JSONL)  │  OtelEmitter  │  SecurityStream                 │
-├──────────────────────────────────────────────────────────────────────────────────────────┤
-│                                 Intelligence Layer                                       │
-│                  LLMRouter (LiteLLM)  │  SpendTracker  │  MemoryManager                  │
-├──────────────────────────────────────────────────────────────────────────────────────────┤
-│                                  Execution Engine                                        │
-│                      StateMachine (5-state)  │  ToolRunner (contracts)                   │
-├──────────────────────────────────────────────────────────────────────────────────────────┤
-│                       Security Foundation (Deterministic — Inviolable)                    │
-│  PermissionEnforcer │ PromptShield │ SecretRedactor │ EgressChecker │ AuditLogger │ ... │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
-```
+![Argus architecture: CLI / Demo Surface (argus demo, run, scan) over Observability Layer (TraceWriter, OtelEmitter, SecurityStream), Intelligence Layer (LLMRouter, SpendTracker, MemoryManager), Execution Engine (StateMachine, ToolRunner), and Security Foundation (PermissionEnforcer, PromptShield, SecretRedactor, EgressChecker, AuditLogger)](docs/assets/architecture.png)
 
 **Security Foundation** is built first and never modified for correctness. It is deterministic: no code path through any security gate touches an LLM. The permission enforcer is a Casbin RBAC/ABAC engine. The prompt shield is a compiled regex battery. The secret redactor is a regex + entropy scanner. The egress checker compares hostnames against a declared allowlist. The audit logger writes to a Unix socket owned by a separate process.
 
