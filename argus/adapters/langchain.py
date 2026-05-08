@@ -62,7 +62,9 @@ class ArgusToolWrapper:
 
             # Execute the actual tool
             raw_output = self._tool.invoke(input, **kwargs)
-            output_str = str(raw_output) if not isinstance(raw_output, str) else raw_output
+            output_str = (
+                str(raw_output) if not isinstance(raw_output, str) else raw_output
+            )
 
             # Post-tool security gates (injection scan, redaction, egress, audit)
             clean_output = self._gateway.post_tool_call(output_str)

@@ -44,10 +44,18 @@ class GatewayConfig:
     prompt_shield_patterns: list[str] = field(default_factory=list)
     egress_allowlist: list[str] = field(default_factory=list)
     hitl: Optional[HITLConfig] = None
-    otel: Optional[Any] = None  # OtelConfig from argus/llm/config.py (lazy typed to avoid circular import)
-    agents: Optional[Any] = None  # AgentRegistryConfig (lazy typed to avoid circular import) — MAGNT-01
-    max_delegation_depth: int = 3  # mirrors AgentRegistryConfig.max_delegation_depth — MAGNT-02
-    anomaly: Optional[Any] = None  # AnomalyConfig (lazy typed to avoid circular import) — ANOM-01
+    otel: Optional[Any] = (
+        None  # OtelConfig from argus/llm/config.py (lazy typed to avoid circular import)
+    )
+    agents: Optional[Any] = (
+        None  # AgentRegistryConfig (lazy typed to avoid circular import) — MAGNT-01
+    )
+    max_delegation_depth: int = (
+        3  # mirrors AgentRegistryConfig.max_delegation_depth — MAGNT-02
+    )
+    anomaly: Optional[Any] = (
+        None  # AnomalyConfig (lazy typed to avoid circular import) — ANOM-01
+    )
 
 
 class SecurityGateway:
@@ -80,7 +88,9 @@ class SecurityGateway:
         self._agent_registry = AgentRegistry(config.agents)
         # Gate 1.75 / Gate 5.5: per-metric AnomalyDetector instances (ANOM-01)
         if config.anomaly is not None:
-            self._anomaly_freq = AnomalyDetector(config.anomaly, metric_type="frequency")
+            self._anomaly_freq = AnomalyDetector(
+                config.anomaly, metric_type="frequency"
+            )
             self._anomaly_egress = AnomalyDetector(config.anomaly, metric_type="egress")
         else:
             self._anomaly_freq = None
@@ -151,19 +161,26 @@ class SecurityGateway:
         """
         # Gate 0.5: Identity resolution and delegation depth enforcement (MAGNT-01/03/04/05)
         ctx_caller_id, ctx_hop_depth = get_caller_context()
-        effective_caller_id: str | None = caller_id if caller_id is not None else ctx_caller_id
+        effective_caller_id: str | None = (
+            caller_id if caller_id is not None else ctx_caller_id
+        )
         effective_hop_depth: int = hop_depth if hop_depth is not None else ctx_hop_depth
 
         # Resolve agent_role from AgentRegistry when caller_id is known
         if effective_caller_id is not None:
-            agent_role = self._agent_registry.resolve_role(effective_caller_id, agent_role)
+            agent_role = self._agent_registry.resolve_role(
+                effective_caller_id, agent_role
+            )
 
         # Fail-closed: reject calls that exceed max delegation depth
         max_depth = self._agent_registry.max_depth
         if effective_hop_depth > max_depth:
             self._emit_violation(
-                "identity", tool_name, agent_role,
-                caller_id=effective_caller_id, hop_depth=effective_hop_depth,
+                "identity",
+                tool_name,
+                agent_role,
+                caller_id=effective_caller_id,
+                hop_depth=effective_hop_depth,
             )
             raise DelegationDepthError(
                 gate="identity",
@@ -187,8 +204,11 @@ class SecurityGateway:
                 )
                 self._obs.on_security_event(event)
             self._emit_violation(
-                "permission", tool_name, agent_role,
-                caller_id=effective_caller_id, hop_depth=effective_hop_depth,
+                "permission",
+                tool_name,
+                agent_role,
+                caller_id=effective_caller_id,
+                hop_depth=effective_hop_depth,
             )
             raise
 
@@ -204,18 +224,23 @@ class SecurityGateway:
             )
             if freq_result.level == ResponseLevel.BLOCK:
                 # Fail-closed auto-deny — no HITL prompt
-                self._audit.send({
-                    "event_type": "anomaly_blocked",
-                    "metric_type": "frequency",
-                    "z_score": freq_result.z_score,
-                    "baseline": freq_result.baseline,
-                    "observed": freq_result.observed,
-                    "tool_name": tool_name,
-                    "caller_id": effective_caller_id,
-                })
+                self._audit.send(
+                    {
+                        "event_type": "anomaly_blocked",
+                        "metric_type": "frequency",
+                        "z_score": freq_result.z_score,
+                        "baseline": freq_result.baseline,
+                        "observed": freq_result.observed,
+                        "tool_name": tool_name,
+                        "caller_id": effective_caller_id,
+                    }
+                )
                 self._emit_violation(
-                    "anomaly", tool_name, agent_role,
-                    caller_id=effective_caller_id, hop_depth=effective_hop_depth,
+                    "anomaly",
+                    tool_name,
+                    agent_role,
+                    caller_id=effective_caller_id,
+                    hop_depth=effective_hop_depth,
                 )
                 raise AnomalyBlockedError(
                     gate="anomaly",
@@ -223,7 +248,9 @@ class SecurityGateway:
                     rule=f"z={freq_result.z_score:.2f}>block_z={self._anomaly_freq._config.block_z}",
                 )
             elif freq_result.level == ResponseLevel.ESCALATE:
-                recent = self._anomaly_freq.get_recent_calls(effective_caller_id or agent_role)
+                recent = self._anomaly_freq.get_recent_calls(
+                    effective_caller_id or agent_role
+                )
                 anomaly_context = {
                     "metric_type": "frequency",
                     "z_score": freq_result.z_score,
@@ -233,7 +260,9 @@ class SecurityGateway:
                 }
 
         # Gate 1.5: HITL approval gate — merges anomaly context when both fire
-        needs_hitl = bool(self._hitl_config and self._hitl_config.needs_approval(tool_name))
+        needs_hitl = bool(
+            self._hitl_config and self._hitl_config.needs_approval(tool_name)
+        )
         needs_anomaly_hitl = anomaly_context is not None
 
         if needs_hitl or needs_anomaly_hitl:
@@ -270,22 +299,27 @@ class SecurityGateway:
                         }
                     )
                 self._emit_violation(
-                    "hitl", tool_name, agent_role,
-                    caller_id=effective_caller_id, hop_depth=effective_hop_depth,
+                    "hitl",
+                    tool_name,
+                    agent_role,
+                    caller_id=effective_caller_id,
+                    hop_depth=effective_hop_depth,
                 )
                 raise
 
         # After HITL, handle WARN level (log-only, no interruption)
         if freq_result is not None and freq_result.level == ResponseLevel.WARN:
-            self._audit.send({
-                "event_type": "anomaly_warn",
-                "metric_type": "frequency",
-                "z_score": freq_result.z_score,
-                "baseline": freq_result.baseline,
-                "observed": freq_result.observed,
-                "tool_name": tool_name,
-                "caller_id": effective_caller_id,
-            })
+            self._audit.send(
+                {
+                    "event_type": "anomaly_warn",
+                    "metric_type": "frequency",
+                    "z_score": freq_result.z_score,
+                    "baseline": freq_result.baseline,
+                    "observed": freq_result.observed,
+                    "tool_name": tool_name,
+                    "caller_id": effective_caller_id,
+                }
+            )
 
         # Gate 2: Audit pre-call (hard stop — fail-closed)
         self._audit.send(
@@ -347,17 +381,22 @@ class SecurityGateway:
                 tool_name="[egress]",
             )
             if egress_result.level == ResponseLevel.BLOCK:
-                self._audit.send({
-                    "event_type": "anomaly_blocked",
-                    "metric_type": "egress",
-                    "z_score": egress_result.z_score,
-                    "baseline": egress_result.baseline,
-                    "observed": egress_result.observed,
-                    "caller_id": egress_caller,
-                })
+                self._audit.send(
+                    {
+                        "event_type": "anomaly_blocked",
+                        "metric_type": "egress",
+                        "z_score": egress_result.z_score,
+                        "baseline": egress_result.baseline,
+                        "observed": egress_result.observed,
+                        "caller_id": egress_caller,
+                    }
+                )
                 self._emit_violation(
-                    "anomaly", None, None,
-                    caller_id=egress_caller, hop_depth=ctx_hop_depth_post,
+                    "anomaly",
+                    None,
+                    None,
+                    caller_id=egress_caller,
+                    hop_depth=ctx_hop_depth_post,
                 )
                 clean_output = "[ANOMALY: output suppressed]"
             elif egress_result.level == ResponseLevel.ESCALATE:
@@ -379,29 +418,36 @@ class SecurityGateway:
                         anomaly_context=egress_anomaly_ctx,
                     )
                 except ApprovalDeniedError:
-                    self._audit.send({
-                        "event_type": "anomaly_blocked",
+                    self._audit.send(
+                        {
+                            "event_type": "anomaly_blocked",
+                            "metric_type": "egress",
+                            "z_score": egress_result.z_score,
+                            "baseline": egress_result.baseline,
+                            "observed": egress_result.observed,
+                            "caller_id": egress_caller,
+                            "denied_by": "hitl",
+                        }
+                    )
+                    self._emit_violation(
+                        "anomaly",
+                        None,
+                        None,
+                        caller_id=egress_caller,
+                        hop_depth=ctx_hop_depth_post,
+                    )
+                    clean_output = "[ANOMALY: output suppressed]"
+            elif egress_result.level == ResponseLevel.WARN:
+                self._audit.send(
+                    {
+                        "event_type": "anomaly_warn",
                         "metric_type": "egress",
                         "z_score": egress_result.z_score,
                         "baseline": egress_result.baseline,
                         "observed": egress_result.observed,
                         "caller_id": egress_caller,
-                        "denied_by": "hitl",
-                    })
-                    self._emit_violation(
-                        "anomaly", None, None,
-                        caller_id=egress_caller, hop_depth=ctx_hop_depth_post,
-                    )
-                    clean_output = "[ANOMALY: output suppressed]"
-            elif egress_result.level == ResponseLevel.WARN:
-                self._audit.send({
-                    "event_type": "anomaly_warn",
-                    "metric_type": "egress",
-                    "z_score": egress_result.z_score,
-                    "baseline": egress_result.baseline,
-                    "observed": egress_result.observed,
-                    "caller_id": egress_caller,
-                })
+                    }
+                )
 
         # Gate 5: Egress allowlist check (log-only in v1)
         if skill_manifest is not None:

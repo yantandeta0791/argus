@@ -15,8 +15,8 @@ class ToolCallRequest(BaseModel):
     tool_name: str
     tool_input: dict[str, Any]
     tool_output: str | None = None
-    caller_id: str | None = None    # MAGNT-01: calling agent identity
-    hop_depth: int = 0              # MAGNT-01: delegation depth from root supervisor
+    caller_id: str | None = None  # MAGNT-01: calling agent identity
+    hop_depth: int = 0  # MAGNT-01: delegation depth from root supervisor
 
 
 class ToolCallResponse(BaseModel):
@@ -46,7 +46,9 @@ def build_app(gateway):
 
         # HITL guard: REST cannot handle terminal-based HITL approval
         hitl_config = getattr(gateway, "_hitl_config", None)
-        if isinstance(hitl_config, HITLConfig) and hitl_config.needs_approval(req.tool_name):
+        if isinstance(hitl_config, HITLConfig) and hitl_config.needs_approval(
+            req.tool_name
+        ):
             return JSONResponse(
                 status_code=503,
                 content={
@@ -111,10 +113,14 @@ def build_app(gateway):
 
 
 def serve_command(
-    config: Path = typer.Option(Path("argus.yaml"), "--config", help="Path to argus.yaml"),
+    config: Path = typer.Option(
+        Path("argus.yaml"), "--config", help="Path to argus.yaml"
+    ),
     host: str = typer.Option("127.0.0.1", "--host", help="Bind address"),
     port: int = typer.Option(8080, "--port", help="Bind port"),
-    audit_dir: Path = typer.Option(Path("./runs/serve"), "--audit-dir", help="Audit log directory"),
+    audit_dir: Path = typer.Option(
+        Path("./runs/serve"), "--audit-dir", help="Audit log directory"
+    ),
 ) -> None:
     """Start the Argus REST API sidecar."""
     if not config.exists():

@@ -14,7 +14,7 @@ Phase 5 additions (HITL sequencing):
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 from argus.security.hitl import HITLConfig
 from argus.security.exceptions import ApprovalDeniedError
@@ -348,9 +348,7 @@ def test_gateway_audit_receives_hitl_decision_event():
 
     # Extract all event_type values from audit.send calls
     sent_events = [
-        call_args[0][0]
-        for call_args in mock_audit.send.call_args_list
-        if call_args[0]
+        call_args[0][0] for call_args in mock_audit.send.call_args_list if call_args[0]
     ]
     event_types = [e.get("event_type") for e in sent_events if isinstance(e, dict)]
     assert "hitl_decision" in event_types, (
@@ -541,7 +539,9 @@ def test_gate05_emit_violation_passes_identity_to_otel():
         max_delegation_depth=2,
     )
     config = GatewayConfig(agents=registry_cfg)
-    gateway = SecurityGateway(config=config, audit_logger=mock_audit, security_otel=mock_otel)
+    gateway = SecurityGateway(
+        config=config, audit_logger=mock_audit, security_otel=mock_otel
+    )
 
     with pytest.raises(DelegationDepthError):
         gateway.pre_tool_call(
@@ -619,7 +619,9 @@ class TestGate175FrequencyAnomaly:
         block_result = AnomalyResult(
             level=ResponseLevel.BLOCK, z_score=5.0, baseline=1.0, observed=10.0
         )
-        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=block_result):
+        with patch.object(
+            gateway._anomaly_freq, "record_and_check", return_value=block_result
+        ):
             with pytest.raises(AnomalyBlockedError):
                 gateway.pre_tool_call("analyst", "search", {"q": "test"})
 
@@ -633,12 +635,18 @@ class TestGate175FrequencyAnomaly:
         block_result = AnomalyResult(
             level=ResponseLevel.BLOCK, z_score=5.0, baseline=1.0, observed=10.0
         )
-        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=block_result):
+        with patch.object(
+            gateway._anomaly_freq, "record_and_check", return_value=block_result
+        ):
             with pytest.raises(AnomalyBlockedError):
-                gateway.pre_tool_call("analyst", "search", {"q": "test"}, caller_id="agent-x")
+                gateway.pre_tool_call(
+                    "analyst", "search", {"q": "test"}, caller_id="agent-x"
+                )
 
         sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
-        anomaly_events = [e for e in sent_calls if e.get("event_type") == "anomaly_blocked"]
+        anomaly_events = [
+            e for e in sent_calls if e.get("event_type") == "anomaly_blocked"
+        ]
         assert len(anomaly_events) == 1
         ev = anomaly_events[0]
         assert ev["metric_type"] == "frequency"
@@ -658,12 +666,16 @@ class TestGate175FrequencyAnomaly:
         from argus.security.anomaly.detector import AnomalyConfig
 
         config = GatewayConfig(anomaly=AnomalyConfig())
-        gateway = SecurityGateway(config=config, audit_logger=mock_audit, security_otel=mock_otel)
+        gateway = SecurityGateway(
+            config=config, audit_logger=mock_audit, security_otel=mock_otel
+        )
 
         block_result = AnomalyResult(
             level=ResponseLevel.BLOCK, z_score=5.0, baseline=1.0, observed=10.0
         )
-        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=block_result):
+        with patch.object(
+            gateway._anomaly_freq, "record_and_check", return_value=block_result
+        ):
             with pytest.raises(AnomalyBlockedError):
                 gateway.pre_tool_call(
                     "analyst", "search", {}, caller_id="agent-x", hop_depth=1
@@ -684,8 +696,14 @@ class TestGate175FrequencyAnomaly:
         escalate_result = AnomalyResult(
             level=ResponseLevel.ESCALATE, z_score=3.5, baseline=2.0, observed=8.0
         )
-        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=escalate_result):
-            with patch.object(gateway._anomaly_freq, "get_recent_calls", return_value=[("search", 1.0)]):
+        with patch.object(
+            gateway._anomaly_freq, "record_and_check", return_value=escalate_result
+        ):
+            with patch.object(
+                gateway._anomaly_freq,
+                "get_recent_calls",
+                return_value=[("search", 1.0)],
+            ):
                 with patch("argus.security.gateway.HITLGate") as MockHITL:
                     MockHITL.return_value.check.return_value = None
                     gateway.pre_tool_call("analyst", "search", {}, caller_id="agent-x")
@@ -707,7 +725,9 @@ class TestGate175FrequencyAnomaly:
         warn_result = AnomalyResult(
             level=ResponseLevel.WARN, z_score=2.5, baseline=1.0, observed=3.0
         )
-        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=warn_result):
+        with patch.object(
+            gateway._anomaly_freq, "record_and_check", return_value=warn_result
+        ):
             # Should NOT raise
             gateway.pre_tool_call("analyst", "search", {}, caller_id="agent-x")
 
@@ -727,7 +747,9 @@ class TestGate175FrequencyAnomaly:
         ok_result = AnomalyResult(
             level=ResponseLevel.OK, z_score=0.5, baseline=1.0, observed=1.2
         )
-        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=ok_result):
+        with patch.object(
+            gateway._anomaly_freq, "record_and_check", return_value=ok_result
+        ):
             gateway.pre_tool_call("analyst", "search", {})
 
         sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
@@ -756,8 +778,12 @@ class TestGate175FrequencyAnomaly:
         escalate_result = AnomalyResult(
             level=ResponseLevel.ESCALATE, z_score=3.5, baseline=2.0, observed=8.0
         )
-        with patch.object(gateway._anomaly_freq, "record_and_check", return_value=escalate_result):
-            with patch.object(gateway._anomaly_freq, "get_recent_calls", return_value=[]):
+        with patch.object(
+            gateway._anomaly_freq, "record_and_check", return_value=escalate_result
+        ):
+            with patch.object(
+                gateway._anomaly_freq, "get_recent_calls", return_value=[]
+            ):
                 with patch("argus.security.gateway.HITLGate") as MockHITL:
                     MockHITL.return_value.check.return_value = None
                     gateway.pre_tool_call("analyst", "search", {})
@@ -777,7 +803,9 @@ class TestGate175FrequencyAnomaly:
         mock_audit = MagicMock(spec=AuditLogger)
         mock_otel = MagicMock()
         config = GatewayConfig()
-        gateway = SecurityGateway(config=config, audit_logger=mock_audit, security_otel=mock_otel)
+        gateway = SecurityGateway(
+            config=config, audit_logger=mock_audit, security_otel=mock_otel
+        )
 
         # Call _emit_violation with gate="anomaly" and verify severity is HIGH
         gateway._emit_violation("anomaly", "some_tool", "analyst")
@@ -814,7 +842,9 @@ class TestGate55EgressAnomaly:
         block_result = AnomalyResult(
             level=ResponseLevel.BLOCK, z_score=5.0, baseline=100.0, observed=10000.0
         )
-        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=block_result):
+        with patch.object(
+            gateway._anomaly_egress, "record_and_check", return_value=block_result
+        ):
             result = gateway.post_tool_call("a" * 10000)
 
         assert result == "[ANOMALY: output suppressed]"
@@ -831,13 +861,17 @@ class TestGate55EgressAnomaly:
         )
         tokens = set_caller_context("egress-agent", 1)
         try:
-            with patch.object(gateway._anomaly_egress, "record_and_check", return_value=block_result):
+            with patch.object(
+                gateway._anomaly_egress, "record_and_check", return_value=block_result
+            ):
                 gateway.post_tool_call("a" * 10000)
         finally:
             reset_caller_context(tokens)
 
         sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
-        anomaly_events = [e for e in sent_calls if e.get("event_type") == "anomaly_blocked"]
+        anomaly_events = [
+            e for e in sent_calls if e.get("event_type") == "anomaly_blocked"
+        ]
         assert len(anomaly_events) == 1
         ev = anomaly_events[0]
         assert ev["metric_type"] == "egress"
@@ -855,12 +889,16 @@ class TestGate55EgressAnomaly:
         mock_audit = MagicMock(spec=AuditLogger)
         mock_otel = MagicMock()
         config = GatewayConfig(anomaly=AnomalyConfig())
-        gateway = SecurityGateway(config=config, audit_logger=mock_audit, security_otel=mock_otel)
+        gateway = SecurityGateway(
+            config=config, audit_logger=mock_audit, security_otel=mock_otel
+        )
 
         block_result = AnomalyResult(
             level=ResponseLevel.BLOCK, z_score=5.0, baseline=100.0, observed=10000.0
         )
-        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=block_result):
+        with patch.object(
+            gateway._anomaly_egress, "record_and_check", return_value=block_result
+        ):
             gateway.post_tool_call("a" * 10000)
 
         kw = mock_otel.emit_security_violation.call_args[1]
@@ -876,8 +914,12 @@ class TestGate55EgressAnomaly:
         escalate_result = AnomalyResult(
             level=ResponseLevel.ESCALATE, z_score=3.5, baseline=200.0, observed=800.0
         )
-        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=escalate_result):
-            with patch.object(gateway._anomaly_egress, "get_recent_calls", return_value=[]):
+        with patch.object(
+            gateway._anomaly_egress, "record_and_check", return_value=escalate_result
+        ):
+            with patch.object(
+                gateway._anomaly_egress, "get_recent_calls", return_value=[]
+            ):
                 with patch("argus.security.gateway.HITLGate") as MockHITL:
                     MockHITL.return_value.check.return_value = None
                     gateway.post_tool_call("a" * 800)
@@ -898,7 +940,9 @@ class TestGate55EgressAnomaly:
             level=ResponseLevel.WARN, z_score=2.5, baseline=100.0, observed=250.0
         )
         original = "clean output data"
-        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=warn_result):
+        with patch.object(
+            gateway._anomaly_egress, "record_and_check", return_value=warn_result
+        ):
             result = gateway.post_tool_call(original)
 
         assert result == original
@@ -917,7 +961,9 @@ class TestGate55EgressAnomaly:
             level=ResponseLevel.OK, z_score=0.5, baseline=100.0, observed=110.0
         )
         original = "normal output"
-        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=ok_result):
+        with patch.object(
+            gateway._anomaly_egress, "record_and_check", return_value=ok_result
+        ):
             result = gateway.post_tool_call(original)
 
         assert result == original
@@ -949,7 +995,9 @@ class TestGate55EgressAnomaly:
             level=ResponseLevel.BLOCK, z_score=5.0, baseline=100.0, observed=10000.0
         )
         # Use output that would be redacted — anomaly check should see redacted length
-        with patch.object(gateway._anomaly_egress, "record_and_check", return_value=block_result) as mock_check:
+        with patch.object(
+            gateway._anomaly_egress, "record_and_check", return_value=block_result
+        ) as mock_check:
             result = gateway.post_tool_call("clean data here")
 
         # Verify record_and_check was called with len of the output (redacted)
@@ -970,7 +1018,9 @@ class TestGate55EgressAnomaly:
         )
         tokens = set_caller_context("my-agent", 0)
         try:
-            with patch.object(gateway._anomaly_egress, "record_and_check", return_value=ok_result) as mock_check:
+            with patch.object(
+                gateway._anomaly_egress, "record_and_check", return_value=ok_result
+            ) as mock_check:
                 gateway.post_tool_call("short output")
         finally:
             reset_caller_context(tokens)

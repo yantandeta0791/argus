@@ -86,7 +86,9 @@ class ArgusCrewAIToolWrapper:
             # Execute the actual tool (pass original args/kwargs unchanged
             # so CrewAI's Pydantic validation runs on the real input)
             raw_output = self._tool.run(*args, **kwargs)
-            output_str = str(raw_output) if not isinstance(raw_output, str) else raw_output
+            output_str = (
+                str(raw_output) if not isinstance(raw_output, str) else raw_output
+            )
 
             # Post-tool security gates (injection scan, redaction, egress, audit)
             clean_output = self._gateway.post_tool_call(output_str)

@@ -185,7 +185,9 @@ def test_wrap_tools_with_caller_id_stores_identity():
     tools = [_make_tool(name="tool_a"), _make_tool(name="tool_b")]
     gw = _make_gateway()
 
-    wrapped = wrap_tools(tools, gateway=gw, agent_role="supervisor", caller_id="agent_b", hop_depth=2)
+    wrapped = wrap_tools(
+        tools, gateway=gw, agent_role="supervisor", caller_id="agent_b", hop_depth=2
+    )
 
     assert len(wrapped) == 2
     assert all(w._caller_id == "agent_b" for w in wrapped)
@@ -218,7 +220,9 @@ def test_run_sets_caller_context_before_pre_tool_call():
 
     gw.pre_tool_call.side_effect = capture_context
 
-    wrapper = ArgusCrewAIToolWrapper(tool=tool, gateway=gw, agent_role="supervisor", caller_id="agent_b", hop_depth=2)
+    wrapper = ArgusCrewAIToolWrapper(
+        tool=tool, gateway=gw, agent_role="supervisor", caller_id="agent_b", hop_depth=2
+    )
     wrapper.run({"q": "test"})
 
     assert len(captured) == 1
@@ -227,14 +231,24 @@ def test_run_sets_caller_context_before_pre_tool_call():
 
 def test_run_resets_caller_context_after_return():
     """ContextVars are reset to previous values after run() returns."""
-    from argus.security.identity import get_caller_context, set_caller_context, reset_caller_context
+    from argus.security.identity import (
+        get_caller_context,
+        set_caller_context,
+        reset_caller_context,
+    )
 
     tool = _make_tool()
     gw = _make_gateway()
 
     outer_tokens = set_caller_context("outer_agent", 0)
     try:
-        wrapper = ArgusCrewAIToolWrapper(tool=tool, gateway=gw, agent_role="worker", caller_id="inner_agent", hop_depth=1)
+        wrapper = ArgusCrewAIToolWrapper(
+            tool=tool,
+            gateway=gw,
+            agent_role="worker",
+            caller_id="inner_agent",
+            hop_depth=1,
+        )
         wrapper.run({"q": "x"})
 
         ctx = get_caller_context()
@@ -245,7 +259,11 @@ def test_run_resets_caller_context_after_return():
 
 def test_run_resets_caller_context_after_exception():
     """ContextVars are reset even when the tool raises an exception."""
-    from argus.security.identity import get_caller_context, set_caller_context, reset_caller_context
+    from argus.security.identity import (
+        get_caller_context,
+        set_caller_context,
+        reset_caller_context,
+    )
 
     tool = _make_tool()
     gw = _make_gateway()
@@ -255,7 +273,13 @@ def test_run_resets_caller_context_after_exception():
 
     outer_tokens = set_caller_context("outer_agent", 0)
     try:
-        wrapper = ArgusCrewAIToolWrapper(tool=tool, gateway=gw, agent_role="worker", caller_id="inner_agent", hop_depth=1)
+        wrapper = ArgusCrewAIToolWrapper(
+            tool=tool,
+            gateway=gw,
+            agent_role="worker",
+            caller_id="inner_agent",
+            hop_depth=1,
+        )
         with pytest.raises(PermissionDeniedError):
             wrapper.run({"q": "x"})
 

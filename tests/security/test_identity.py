@@ -1,7 +1,5 @@
 """Tests for argus.security.identity — ContextVars, AgentRegistry, AgentRegistryConfig."""
 
-import pytest
-
 
 # --- ContextVar helpers ---
 
@@ -16,7 +14,11 @@ def test_get_caller_context_defaults_to_none_and_zero():
 
 
 def test_set_and_get_caller_context():
-    from argus.security.identity import set_caller_context, get_caller_context, reset_caller_context
+    from argus.security.identity import (
+        set_caller_context,
+        get_caller_context,
+        reset_caller_context,
+    )
 
     tokens = set_caller_context("agent_a", 2)
     try:
@@ -28,7 +30,11 @@ def test_set_and_get_caller_context():
 
 
 def test_reset_caller_context_restores_previous_values():
-    from argus.security.identity import set_caller_context, get_caller_context, reset_caller_context
+    from argus.security.identity import (
+        set_caller_context,
+        get_caller_context,
+        reset_caller_context,
+    )
 
     # Set initial context
     tokens1 = set_caller_context("parent_agent", 1)

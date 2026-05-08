@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import sys
 from types import ModuleType
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -155,7 +155,9 @@ class TestArgusAutoGenToolWrapper:
 
         result = await secured_fn(query="hello")
 
-        gw.pre_tool_call.assert_called_once_with("analyst", "search", {"query": "hello"})
+        gw.pre_tool_call.assert_called_once_with(
+            "analyst", "search", {"query": "hello"}
+        )
         tool.run_json.assert_called_once()
         gw.post_tool_call.assert_called_once_with("raw output")
         assert result == "clean output"
@@ -171,7 +173,9 @@ class TestArgusAutoGenToolWrapper:
 
         result = await secured_fn(data="value")
 
-        gw.pre_tool_call.assert_called_once_with("analyst", "plain_tool", {"data": "value"})
+        gw.pre_tool_call.assert_called_once_with(
+            "analyst", "plain_tool", {"data": "value"}
+        )
         fn.assert_called_once()
         gw.post_tool_call.assert_called_once()
         assert result == "processed"
@@ -226,7 +230,6 @@ class TestArgusAutoGenToolWrapper:
             await secured_fn(query="test")
 
         tool.run_json.assert_called_once()
-
 
     @pytest.mark.asyncio
     async def test_approval_denied_propagates_from_autogen_wrapper(self):

@@ -83,7 +83,11 @@ def test_tool_call_allowed():
 
     resp = client.post(
         "/tool-call",
-        json={"agent_role": "researcher", "tool_name": "web_search", "tool_input": {"query": "hello"}},
+        json={
+            "agent_role": "researcher",
+            "tool_name": "web_search",
+            "tool_input": {"query": "hello"},
+        },
     )
     assert resp.status_code == 200
     body = resp.json()
@@ -99,7 +103,9 @@ def test_tool_call_blocked_permission():
     from argus.security.exceptions import PermissionDeniedError
 
     gw = _make_gateway(
-        pre_raise=PermissionDeniedError(gate="permission", blocked="delete_db", rule="deny")
+        pre_raise=PermissionDeniedError(
+            gate="permission", blocked="delete_db", rule="deny"
+        )
     )
     app = build_app(gw)
     client = TestClient(app)
@@ -232,7 +238,11 @@ def test_audit_entry_structure_parity():
 
     resp = client.post(
         "/tool-call",
-        json={"agent_role": "researcher", "tool_name": "web_search", "tool_input": {"q": "x"}},
+        json={
+            "agent_role": "researcher",
+            "tool_name": "web_search",
+            "tool_input": {"q": "x"},
+        },
     )
     assert resp.status_code == 200
     body = resp.json()
@@ -283,7 +293,9 @@ def test_tool_call_with_caller_id_and_hop_depth_passed_to_gateway():
     )
     assert resp.status_code == 200
     gw.pre_tool_call.assert_called_once_with(
-        "supervisor", "web_search", {"q": "test"},
+        "supervisor",
+        "web_search",
+        {"q": "test"},
         caller_id="agent_x",
         hop_depth=2,
     )
@@ -305,7 +317,9 @@ def test_tool_call_without_identity_fields_uses_defaults():
     )
     assert resp.status_code == 200
     gw.pre_tool_call.assert_called_once_with(
-        "analyst", "web_search", {},
+        "analyst",
+        "web_search",
+        {},
         caller_id=None,
         hop_depth=0,
     )

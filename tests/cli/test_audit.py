@@ -139,7 +139,9 @@ def test_audit_filter_type(tmp_path):
     ]
     _write_jsonl(tmp_log, events)
 
-    result = runner.invoke(app, ["audit", "--log", str(tmp_log), "--type", "permission"])
+    result = runner.invoke(
+        app, ["audit", "--log", str(tmp_log), "--type", "permission"]
+    )
     assert "read_file" in result.output
     assert "fetch_url" not in result.output
 
@@ -218,8 +220,17 @@ def test_audit_normalizes_gateway_records(tmp_path):
 
     tmp_log = tmp_path / "audit.jsonl"
     events = [
-        {"event_type": "tool_call_pre", "agent_role": "analyst", "tool_name": "read_file"},
-        {"event_type": "hitl_decision", "approved": False, "tool_name": "delete_db", "tool_input": {}},
+        {
+            "event_type": "tool_call_pre",
+            "agent_role": "analyst",
+            "tool_name": "read_file",
+        },
+        {
+            "event_type": "hitl_decision",
+            "approved": False,
+            "tool_name": "delete_db",
+            "tool_input": {},
+        },
     ]
     _write_jsonl(tmp_log, events)
 
@@ -235,8 +246,17 @@ def test_audit_filter_type_on_gateway_records(tmp_path):
 
     tmp_log = tmp_path / "audit.jsonl"
     events = [
-        {"event_type": "tool_call_pre", "agent_role": "analyst", "tool_name": "read_file"},
-        {"event_type": "hitl_decision", "approved": False, "tool_name": "delete_db", "tool_input": {}},
+        {
+            "event_type": "tool_call_pre",
+            "agent_role": "analyst",
+            "tool_name": "read_file",
+        },
+        {
+            "event_type": "hitl_decision",
+            "approved": False,
+            "tool_name": "delete_db",
+            "tool_input": {},
+        },
     ]
     _write_jsonl(tmp_log, events)
 

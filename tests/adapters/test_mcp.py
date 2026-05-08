@@ -230,7 +230,9 @@ class TestArgusMCPMiddleware:
             content=[_StubTextContent(type="text", text="unfiltered output")]
         )
         call_next = AsyncMock(return_value=raw_result)
-        ctx = _StubMiddlewareContext(name="fetch", arguments={"url": "http://example.com"})
+        ctx = _StubMiddlewareContext(
+            name="fetch", arguments={"url": "http://example.com"}
+        )
 
         result = await mw.on_call_tool(ctx, call_next)
 

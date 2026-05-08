@@ -86,7 +86,9 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
         if gateway_config.otel is not None:
             security_otel = build_security_otel_emitter(gateway_config.otel)
         gateway = SecurityGateway(
-            config=gateway_config, audit_logger=audit_logger, obs=obs,
+            config=gateway_config,
+            audit_logger=audit_logger,
+            obs=obs,
             security_otel=security_otel,
         )
 

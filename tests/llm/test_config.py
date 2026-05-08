@@ -55,7 +55,6 @@ def test_load_rbac_config_returns_none_when_no_rbac_section():
 
 def test_load_rbac_config_allow_list_produces_policy_rules():
     from argus.llm.config import load_rbac_config
-    from argus.security.permission.policy import PolicyRule
 
     raw = {"rbac": {"roles": {"analyst": {"allow": ["read_db"]}}}}
     config = load_rbac_config(raw)
@@ -68,7 +67,6 @@ def test_load_rbac_config_allow_list_produces_policy_rules():
 
 def test_load_rbac_config_deny_list_produces_deny_rules():
     from argus.llm.config import load_rbac_config
-    from argus.security.permission.policy import PolicyRule
 
     raw = {"rbac": {"roles": {"analyst": {"deny": ["delete_records"]}}}}
     config = load_rbac_config(raw)
@@ -346,6 +344,7 @@ def test_load_gateway_config_with_otel_builds_emitter():
 def test_load_agents_config_returns_none_when_no_agents_section():
     def _load():
         from argus.llm.config import load_agents_config
+
         return load_agents_config({})
 
     result = _load()
@@ -355,6 +354,7 @@ def test_load_agents_config_returns_none_when_no_agents_section():
 def test_load_agents_config_returns_none_when_empty_agents_section():
     def _load():
         from argus.llm.config import load_agents_config
+
         return load_agents_config({"agents": {}})
 
     result = _load()
@@ -364,6 +364,7 @@ def test_load_agents_config_returns_none_when_empty_agents_section():
 def test_load_agents_config_parses_registry_and_depth():
     def _load():
         from argus.llm.config import load_agents_config
+
         raw = {
             "agents": {
                 "max_delegation_depth": 5,
@@ -384,6 +385,7 @@ def test_load_agents_config_parses_registry_and_depth():
 def test_load_agents_config_missing_role_uses_agent_name():
     def _load():
         from argus.llm.config import load_agents_config
+
         raw = {
             "agents": {
                 "registry": {
@@ -401,6 +403,7 @@ def test_load_agents_config_missing_role_uses_agent_name():
 def test_load_agents_config_default_max_depth_when_not_specified():
     def _load():
         from argus.llm.config import load_agents_config
+
         raw = {
             "agents": {
                 "registry": {"supervisor": {"role": "admin"}},
@@ -430,6 +433,7 @@ def test_gateway_config_has_max_delegation_depth_field():
 def test_load_gateway_config_populates_agents():
     def _load():
         from argus.llm.config import load_gateway_config
+
         raw = {
             "agents": {
                 "max_delegation_depth": 4,
@@ -447,6 +451,7 @@ def test_load_gateway_config_populates_agents():
 def test_load_gateway_config_agents_none_when_absent():
     def _load():
         from argus.llm.config import load_gateway_config
+
         return load_gateway_config({})
 
     result = _load()

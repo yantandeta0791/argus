@@ -41,7 +41,11 @@ def _parse_duration(s: str) -> datetime:
         )
     value = int(match.group(1))
     unit = match.group(2)
-    delta = {"m": timedelta(minutes=value), "h": timedelta(hours=value), "d": timedelta(days=value)}[unit]
+    delta = {
+        "m": timedelta(minutes=value),
+        "h": timedelta(hours=value),
+        "d": timedelta(days=value),
+    }[unit]
     return datetime.now(tz=timezone.utc) - delta
 
 

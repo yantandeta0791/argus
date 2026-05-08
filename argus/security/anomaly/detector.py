@@ -18,7 +18,7 @@ from __future__ import annotations
 import statistics
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
@@ -41,11 +41,13 @@ class AnomalyConfig:
     """
 
     enabled: bool = True
-    window_seconds: int = 60       # Sliding window duration in seconds
-    min_observations: int = 10     # Warmup period — suppress detection until this many calls
-    warn_z: float = 2.0            # z-score >= warn_z  → WARN
-    escalate_z: float = 3.0        # z-score >= escalate_z → ESCALATE
-    block_z: float = 4.0           # z-score >= block_z  → BLOCK
+    window_seconds: int = 60  # Sliding window duration in seconds
+    min_observations: int = (
+        10  # Warmup period — suppress detection until this many calls
+    )
+    warn_z: float = 2.0  # z-score >= warn_z  → WARN
+    escalate_z: float = 3.0  # z-score >= escalate_z → ESCALATE
+    block_z: float = 4.0  # z-score >= block_z  → BLOCK
 
 
 @dataclass
@@ -222,9 +224,7 @@ class AnomalyDetector:
             observed=value,
         )
 
-    def get_recent_calls(
-        self, caller_id: str, n: int = 5
-    ) -> list[tuple[str, float]]:
+    def get_recent_calls(self, caller_id: str, n: int = 5) -> list[tuple[str, float]]:
         """Return the last N (tool_name, timestamp) pairs for HITL banner context.
 
         Returns an empty list if caller_id has no recorded calls.

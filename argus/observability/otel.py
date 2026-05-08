@@ -14,6 +14,7 @@ Do NOT call trace.set_tracer_provider() — that pollutes global state.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 from opentelemetry.sdk.trace import TracerProvider
@@ -22,6 +23,9 @@ from opentelemetry.sdk.trace.export import (
     SpanExporter,
     SpanExportResult,
 )
+
+if TYPE_CHECKING:
+    from argus.llm.config import OtelConfig
 
 # Raw string constants — gen_ai.* semconv not yet in opentelemetry-semantic-conventions 0.61b0
 _GEN_AI_SYSTEM = "gen_ai.system"

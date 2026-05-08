@@ -25,7 +25,6 @@ from unittest.mock import patch
 from argus.security.anomaly import (
     AnomalyDetector,
     AnomalyConfig,
-    AnomalyResult,
     ResponseLevel,
 )
 from argus.security.events import GateType
@@ -35,6 +34,7 @@ from argus.security.exceptions import AnomalyBlockedError, ArgusSecurityError
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_detector(**kwargs) -> AnomalyDetector:
     """Create an AnomalyDetector with tight defaults for test speed."""
@@ -50,7 +50,9 @@ def make_detector(**kwargs) -> AnomalyDetector:
     return AnomalyDetector(config=config, metric_type="frequency")
 
 
-def warmup(detector: AnomalyDetector, caller_id: str, n: int, value: float = 1.0) -> None:
+def warmup(
+    detector: AnomalyDetector, caller_id: str, n: int, value: float = 1.0
+) -> None:
     """Push n observations through the detector to build a baseline."""
     for _ in range(n):
         detector.record_and_check(caller_id, value, "tool")
@@ -60,6 +62,7 @@ def warmup(detector: AnomalyDetector, caller_id: str, n: int, value: float = 1.0
 # 1. Warmup suppression
 # ---------------------------------------------------------------------------
 
+
 class TestWarmup:
     def test_returns_ok_during_warmup(self):
         """All calls before min_observations must return OK regardless of value."""
@@ -67,7 +70,9 @@ class TestWarmup:
         # Push 9 calls (one less than threshold); all must be OK
         for i in range(9):
             result = detector.record_and_check("agent-A", 1.0, "tool")
-            assert result.level == ResponseLevel.OK, f"Call {i+1} should be OK during warmup"
+            assert result.level == ResponseLevel.OK, (
+                f"Call {i + 1} should be OK during warmup"
+            )
 
     def test_exactly_min_observations_exits_warmup(self):
         """The 10th call (== min_observations) starts real detection."""
@@ -82,6 +87,7 @@ class TestWarmup:
 # ---------------------------------------------------------------------------
 # 2. BLOCK response level
 # ---------------------------------------------------------------------------
+
 
 class TestBlock:
     def test_spike_at_block_threshold_returns_block(self):
@@ -104,17 +110,23 @@ class TestBlock:
 # 3. ESCALATE response level
 # ---------------------------------------------------------------------------
 
+
 class TestEscalate:
     def test_moderate_spike_returns_escalate(self):
         """A spike with z between escalate_z and block_z must return ESCALATE."""
         # Use many stable observations to tighten stdev, then moderate spike
-        detector = make_detector(min_observations=10, warn_z=2.0, escalate_z=3.0, block_z=10.0)
+        detector = make_detector(
+            min_observations=10, warn_z=2.0, escalate_z=3.0, block_z=10.0
+        )
         warmup(detector, "agent-A", 20, value=1.0)
         # Force a spike in escalate zone: push a value that is between escalate and block
         # With 20 obs of 1.0, stdev is near 0; add some noise to get meaningful stdev
         import statistics
+
         # Build baseline with some variance
-        detector2 = make_detector(min_observations=10, warn_z=2.0, escalate_z=3.0, block_z=10.0)
+        detector2 = make_detector(
+            min_observations=10, warn_z=2.0, escalate_z=3.0, block_z=10.0
+        )
         base = [1.0, 1.1, 0.9, 1.0, 1.1, 0.9, 1.0, 1.1, 0.9, 1.0]
         for v in base:
             detector2.record_and_check("agent-A", v, "tool")
@@ -130,14 +142,18 @@ class TestEscalate:
 # 4. WARN response level
 # ---------------------------------------------------------------------------
 
+
 class TestWarn:
     def test_mild_spike_returns_warn(self):
         """A mild spike with z between warn_z and escalate_z must return WARN."""
-        detector = make_detector(min_observations=10, warn_z=2.0, escalate_z=5.0, block_z=10.0)
+        detector = make_detector(
+            min_observations=10, warn_z=2.0, escalate_z=5.0, block_z=10.0
+        )
         base = [1.0, 1.1, 0.9, 1.0, 1.1, 0.9, 1.0, 1.1, 0.9, 1.0]
         for v in base:
             detector.record_and_check("agent-A", v, "tool")
         import statistics
+
         sd = statistics.stdev(base)
         # Spike at warn zone: z ≈ 2.5 → WARN
         spike_val = 1.0 + 2.5 * sd
@@ -148,6 +164,7 @@ class TestWarn:
 # ---------------------------------------------------------------------------
 # 5. OK after warmup
 # ---------------------------------------------------------------------------
+
 
 class TestOKAfterWarmup:
     def test_normal_value_returns_ok(self):
@@ -161,6 +178,7 @@ class TestOKAfterWarmup:
 # ---------------------------------------------------------------------------
 # 6. Per-agent isolation
 # ---------------------------------------------------------------------------
+
 
 class TestPerAgentIsolation:
     def test_agent_a_does_not_affect_agent_b(self):
@@ -187,6 +205,7 @@ class TestPerAgentIsolation:
 # ---------------------------------------------------------------------------
 # 7. Window eviction
 # ---------------------------------------------------------------------------
+
 
 class TestWindowEviction:
     def test_old_observations_are_evicted(self):
@@ -223,6 +242,7 @@ class TestWindowEviction:
 # 8. Edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestEdgeCases:
     def test_stdev_zero_returns_ok(self):
         """When all values are identical (stdev=0), must return OK — no ZeroDivisionError."""
@@ -242,6 +262,7 @@ class TestEdgeCases:
 # 9. AnomalyConfig defaults
 # ---------------------------------------------------------------------------
 
+
 class TestAnomalyConfigDefaults:
     def test_default_values(self):
         """AnomalyConfig defaults must match specification."""
@@ -258,10 +279,12 @@ class TestAnomalyConfigDefaults:
 # 10. load_anomaly_config
 # ---------------------------------------------------------------------------
 
+
 class TestLoadAnomalyConfig:
     def test_parses_anomaly_section(self):
         """load_anomaly_config returns AnomalyConfig when anomaly section present."""
         from argus.llm.config import load_anomaly_config
+
         raw = {
             "anomaly": {
                 "enabled": True,
@@ -283,12 +306,14 @@ class TestLoadAnomalyConfig:
     def test_returns_none_when_absent(self):
         """load_anomaly_config returns None when anomaly section is absent."""
         from argus.llm.config import load_anomaly_config
+
         cfg = load_anomaly_config({})
         assert cfg is None
 
     def test_returns_none_when_enabled_false(self):
         """load_anomaly_config returns None when enabled: false."""
         from argus.llm.config import load_anomaly_config
+
         raw = {"anomaly": {"enabled": False}}
         cfg = load_anomaly_config(raw)
         assert cfg is None
@@ -296,6 +321,7 @@ class TestLoadAnomalyConfig:
     def test_uses_defaults_for_missing_keys(self):
         """load_anomaly_config uses AnomalyConfig defaults when keys are absent."""
         from argus.llm.config import load_anomaly_config
+
         raw = {"anomaly": {"enabled": True}}
         cfg = load_anomaly_config(raw)
         assert cfg is not None
@@ -308,6 +334,7 @@ class TestLoadAnomalyConfig:
 # 11. GateType.ANOMALY enum
 # ---------------------------------------------------------------------------
 
+
 class TestGateTypeAnomaly:
     def test_anomaly_enum_exists(self):
         """GateType.ANOMALY must exist with value 'anomaly'."""
@@ -318,6 +345,7 @@ class TestGateTypeAnomaly:
 # ---------------------------------------------------------------------------
 # 12. AnomalyBlockedError
 # ---------------------------------------------------------------------------
+
 
 class TestAnomalyBlockedError:
     def test_is_argus_security_error_subclass(self):
@@ -341,10 +369,12 @@ class TestAnomalyBlockedError:
 # 13. load_gateway_config wires anomaly field
 # ---------------------------------------------------------------------------
 
+
 class TestLoadGatewayConfigAnomaly:
     def test_gateway_config_has_anomaly_field(self):
         """load_gateway_config must include anomaly field from load_anomaly_config."""
         from argus.llm.config import load_gateway_config
+
         raw = {
             "anomaly": {
                 "enabled": True,
@@ -359,6 +389,7 @@ class TestLoadGatewayConfigAnomaly:
     def test_gateway_config_anomaly_none_when_absent(self):
         """GatewayConfig.anomaly must be None when no anomaly section."""
         from argus.llm.config import load_gateway_config
+
         cfg = load_gateway_config({})
         assert hasattr(cfg, "anomaly")
         assert cfg.anomaly is None
@@ -367,6 +398,7 @@ class TestLoadGatewayConfigAnomaly:
 # ---------------------------------------------------------------------------
 # 14. AnomalyResult fields
 # ---------------------------------------------------------------------------
+
 
 class TestAnomalyResult:
     def test_result_has_required_fields(self):

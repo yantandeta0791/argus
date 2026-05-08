@@ -125,6 +125,7 @@ def load_hitl_config(raw: dict):
     if not require_approval and timeout is None:
         return None
     from argus.security.hitl import HITLConfig  # lazy import — avoids circular dep
+
     return HITLConfig(require_approval=require_approval, timeout_seconds=timeout)
 
 
@@ -140,7 +141,7 @@ class SecretsConfig(BaseModel):
     @field_validator("patterns", mode="before")
     @classmethod
     def validate_regex_patterns(cls, v):
-        for pattern in (v or []):
+        for pattern in v or []:
             try:
                 re.compile(pattern)
             except re.error as exc:
@@ -157,16 +158,17 @@ def load_rbac_config(raw: dict):
     POLC-01: role-centric YAML → flat PolicyRule list with allow/deny effects.
     """
     rbac_raw = raw.get("rbac", {}) or {}
-    roles_raw = (rbac_raw.get("roles") or {})
+    roles_raw = rbac_raw.get("roles") or {}
     if not roles_raw:
         return None
     from argus.security.permission.policy import PolicyConfig, PolicyRule  # lazy import
+
     rules = []
     for role_name, role_cfg in roles_raw.items():
         role_cfg = role_cfg or {}
-        for tool in (role_cfg.get("allow") or []):
+        for tool in role_cfg.get("allow") or []:
             rules.append(PolicyRule(role=role_name, tool=tool, effect="allow"))
-        for tool in (role_cfg.get("deny") or []):
+        for tool in role_cfg.get("deny") or []:
             rules.append(PolicyRule(role=role_name, tool=tool, effect="deny"))
     return PolicyConfig(rules=rules)
 
@@ -182,7 +184,10 @@ def load_secrets_config(raw: dict) -> SecretsConfig:
         return SecretsConfig(patterns=secrets_raw.get("patterns") or [])
     except ValidationError as exc:
         from argus.security.exceptions import ConfigValidationError  # lazy import
-        raise ConfigValidationError(f"Invalid secrets config in argus.yaml:\n{exc}") from exc
+
+        raise ConfigValidationError(
+            f"Invalid secrets config in argus.yaml:\n{exc}"
+        ) from exc
 
 
 def load_egress_config(raw: dict) -> list[str]:
@@ -209,6 +214,7 @@ def load_spend_profiles(raw: dict, active_profile: str | None = None) -> SpendCo
     POLC-04: spend.profiles.<name> → SpendConfig.
     """
     from argus.security.exceptions import ConfigValidationError  # lazy import
+
     spend_raw = raw.get("spend", {}) or {}
     profiles = spend_raw.get("profiles", {}) or {}
     profile_name = active_profile or os.environ.get("ARGUS_SPEND_PROFILE")
@@ -242,7 +248,10 @@ def load_anomaly_config(raw: dict):
         return None
     if not anomaly_raw.get("enabled", True):
         return None
-    from argus.security.anomaly.detector import AnomalyConfig  # lazy import — avoids circular dep
+    from argus.security.anomaly.detector import (
+        AnomalyConfig,
+    )  # lazy import — avoids circular dep
+
     return AnomalyConfig(
         enabled=True,
         window_seconds=anomaly_raw.get("window_seconds", 60),
@@ -271,7 +280,10 @@ def load_agents_config(raw: dict):
     registry_raw = agents_raw.get("registry", {}) or {}
     if not registry_raw:
         return None
-    from argus.security.identity import AgentRegistryConfig  # lazy import — avoids circular dep
+    from argus.security.identity import (
+        AgentRegistryConfig,
+    )  # lazy import — avoids circular dep
+
     agents = {}
     for agent_id, agent_cfg in registry_raw.items():
         agent_cfg = agent_cfg or {}
@@ -306,6 +318,8 @@ def load_gateway_config(raw: dict):
         hitl=hitl,
         otel=otel,
         agents=agents_cfg,
-        max_delegation_depth=agents_cfg.max_delegation_depth if agents_cfg is not None else 3,
+        max_delegation_depth=agents_cfg.max_delegation_depth
+        if agents_cfg is not None
+        else 3,
         anomaly=anomaly,
     )

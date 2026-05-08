@@ -306,7 +306,9 @@ class TestHITLGateAnomalyContext:
     def test_anomaly_context_banner_printed(self, capsys):
         """ANOM: when anomaly_context is provided, check() prints [ARGUS ANOMALY] banner
         with rate, baseline, z-score before the tool input JSON."""
-        config = HITLConfig(require_approval={"delete_file": True}, timeout_seconds=None)
+        config = HITLConfig(
+            require_approval={"delete_file": True}, timeout_seconds=None
+        )
         gate = HITLGate(config=config)
 
         with patch("builtins.input", return_value="approve"):
@@ -318,9 +320,9 @@ class TestHITLGateAnomalyContext:
 
         captured = capsys.readouterr()
         assert "[ARGUS ANOMALY]" in captured.out
-        assert "3.5" in captured.out   # z_score
-        assert "2.0" in captured.out   # baseline
-        assert "8.0" in captured.out   # observed rate
+        assert "3.5" in captured.out  # z_score
+        assert "2.0" in captured.out  # baseline
+        assert "8.0" in captured.out  # observed rate
 
     def test_anomaly_context_shows_recent_calls(self, capsys):
         """ANOM: anomaly banner includes last 5 calls (tool_name @ relative_time)."""
@@ -353,7 +355,9 @@ class TestHITLGateAnomalyContext:
         captured = capsys.readouterr()
         anomaly_pos = captured.out.find("[ARGUS ANOMALY]")
         input_pos = captured.out.find("my_query")
-        assert anomaly_pos < input_pos, "Anomaly banner must appear before tool input JSON"
+        assert anomaly_pos < input_pos, (
+            "Anomaly banner must appear before tool input JSON"
+        )
 
     def test_anomaly_context_fires_without_require_approval(self, capsys):
         """ANOM: when anomaly_context is provided but tool not in require_approval,
@@ -395,7 +399,9 @@ class TestHITLGateAnomalyContext:
 
     def test_no_anomaly_context_no_anomaly_banner(self, capsys):
         """ANOM: when anomaly_context is None (not provided), no [ARGUS ANOMALY] banner printed."""
-        config = HITLConfig(require_approval={"delete_file": True}, timeout_seconds=None)
+        config = HITLConfig(
+            require_approval={"delete_file": True}, timeout_seconds=None
+        )
         gate = HITLGate(config=config)
 
         with patch("builtins.input", return_value="approve"):

@@ -84,11 +84,18 @@ class HITLGate:
             observed = anomaly_context.get("observed", 0.0)
             recent_calls = anomaly_context.get("recent_calls", [])
 
-            spike_label = "Frequency spike" if metric_type == "frequency" else "Egress volume spike"
+            spike_label = (
+                "Frequency spike"
+                if metric_type == "frequency"
+                else "Egress volume spike"
+            )
             print(f"\n[ARGUS ANOMALY] {spike_label} detected")
-            print(f"Rate: {observed} calls/window | Baseline: {baseline:.2f} | Z-score: {z_score:.2f}")
+            print(
+                f"Rate: {observed} calls/window | Baseline: {baseline:.2f} | Z-score: {z_score:.2f}"
+            )
             if recent_calls:
                 import time as _time
+
                 now = _time.monotonic()
                 formatted = ", ".join(
                     f"{name} @ -{now - ts:.1f}s" for name, ts in recent_calls

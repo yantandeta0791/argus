@@ -64,6 +64,7 @@ def reset_caller_context(tokens: tuple) -> None:
 # AgentRegistryConfig and AgentRegistry
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class AgentRegistryConfig:
     """Configuration for the agent identity registry.
