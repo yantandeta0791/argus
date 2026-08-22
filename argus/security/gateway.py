@@ -256,8 +256,7 @@ class SecurityGateway:
             and active_provenance.value != required
         ):
             rule = (
-                f"provenance_required={required} but "
-                f"active={active_provenance.value}"
+                f"provenance_required={required} but active={active_provenance.value}"
             )
             self._record_policy_decision(
                 mode=self._config.policy_mode,
@@ -302,27 +301,44 @@ class SecurityGateway:
                 provenance=active_provenance.value,
             )
 
-        # Gate 1: Permission (hard stop)
+        # Gate 1: Permission (hard stop in enforce mode; observable in shadow mode)
         try:
             self._permission.enforce(agent_role, tool_name)
         except ArgusSecurityError as exc:
-            if self._obs:
-                event = SecurityEvent.from_context(  # CLEAN-04
-                    gate=GateType.PERMISSION,
-                    outcome="blocked",
-                    agent_role=agent_role,
-                    tool_name=tool_name,
-                    rule_triggered=getattr(exc, "rule", None),
-                )
-                self._obs.on_security_event(event)
-            self._emit_violation(
-                "permission",
-                tool_name,
-                agent_role,
+            self._record_policy_decision(
+                mode=self._config.policy_mode,
+                outcome=(
+                    "would_block" if self._config.policy_mode == "shadow" else "block"
+                ),
+                gate="permission",
+                tool_name=tool_name,
+                agent_role=agent_role,
+                rule=getattr(exc, "rule", None),
+                reason="Tool permission denied by policy",
                 caller_id=effective_caller_id,
                 hop_depth=effective_hop_depth,
+                provenance=active_provenance.value,
             )
-            raise
+            if self._config.policy_mode == "shadow":
+                pass
+            else:
+                if self._obs:
+                    event = SecurityEvent.from_context(  # CLEAN-04
+                        gate=GateType.PERMISSION,
+                        outcome="blocked",
+                        agent_role=agent_role,
+                        tool_name=tool_name,
+                        rule_triggered=getattr(exc, "rule", None),
+                    )
+                    self._obs.on_security_event(event)
+                self._emit_violation(
+                    "permission",
+                    tool_name,
+                    agent_role,
+                    caller_id=effective_caller_id,
+                    hop_depth=effective_hop_depth,
+                )
+                raise
 
         # Gate 1.75 pre-compute: check frequency anomaly BEFORE HITL prompt so
         # anomaly context can be merged into the HITL banner (ANOM-01)

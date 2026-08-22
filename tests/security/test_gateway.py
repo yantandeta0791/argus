@@ -178,8 +178,10 @@ def test_gateway_gate_order_permission_before_audit_in_pre():
     with pytest.raises(PermissionDeniedError):
         gateway.pre_tool_call("analyst", "write_file", {})
 
-    # Permission fires before audit — audit.send must NOT be called on denied request
-    mock_audit.send.assert_not_called()
+    # Permission denial produces a normalized policy decision but no tool-call audit event.
+    sent_events = [call.args[0] for call in mock_audit.send.call_args_list]
+    assert [event["event_type"] for event in sent_events] == ["policy_decision"]
+    assert sent_events[0]["outcome"] == "block"
 
 
 def test_gateway_security_events_property():
