@@ -554,7 +554,7 @@ Initial bootstrap. Security foundation, 5-state execution engine, LLM cost route
 - Webhook HITL approval (`HITL-06`) — approve/deny over signed HTTP requests for REST-side agents; see [docs/webhook-hitl.md](docs/webhook-hitl.md)
 - HMAC SHA-256 signed canonical payloads; timeout, malformed response, and transport failure default deny
 
-### v0.8 — Policy Shadow Mode & Decision Evidence (in implementation)
+### v0.8 — Policy Shadow Mode & Decision Evidence (shipped 2026-08-22)
 
 - `policy.mode: shadow` evaluates provenance and RBAC permissions without blocking, emitting immutable `would_block` decisions
 - `argus audit --shadow --summary` explains impact by gate/tool/rule and policy hash
