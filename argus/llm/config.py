@@ -124,11 +124,20 @@ def load_hitl_config(raw: dict):
         if (cfg or {}).get("require_approval")
     }
     timeout = hitl_raw.get("timeout_seconds", None)
-    if not require_approval and timeout is None:
+    webhook_url = hitl_raw.get("webhook_url")
+    webhook_secret = hitl_raw.get("webhook_secret")
+    webhook_timeout = float(hitl_raw.get("webhook_timeout_seconds", 30.0))
+    if not require_approval and timeout is None and webhook_url is None:
         return None
     from argus.security.hitl import HITLConfig  # lazy import — avoids circular dep
 
-    return HITLConfig(require_approval=require_approval, timeout_seconds=timeout)
+    return HITLConfig(
+        require_approval=require_approval,
+        timeout_seconds=timeout,
+        webhook_url=webhook_url,
+        webhook_secret=webhook_secret,
+        webhook_timeout_seconds=webhook_timeout,
+    )
 
 
 class SecretsConfig(BaseModel):

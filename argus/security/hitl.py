@@ -11,10 +11,15 @@ Only stdlib used: select, threading, json, sys, dataclasses.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import select
 import sys
 import threading
+import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 
 
@@ -30,6 +35,9 @@ class HITLConfig:
 
     require_approval: dict[str, bool] = field(default_factory=dict)
     timeout_seconds: int | None = None
+    webhook_url: str | None = None
+    webhook_secret: str | None = None
+    webhook_timeout_seconds: float = 30.0
 
     def needs_approval(self, tool_name: str) -> bool:
         """Return True if this tool requires human approval before execution."""
@@ -80,6 +88,27 @@ class HITLGate:
         # Gate fires if tool requires approval OR if anomaly context forces escalation
         if not self._config.needs_approval(tool_name) and anomaly_context is None:
             return None
+
+        # Webhook mode is REST-safe: no stdin. A transport failure, timeout,
+        # malformed payload, or non-approve response all deny (fail-closed).
+        if self._config.webhook_url:
+            decision = self._request_webhook(
+                tool_name=tool_name,
+                tool_input=tool_input,
+                caller_id=caller_id,
+                hop_depth=hop_depth,
+                max_depth=max_depth,
+                anomaly_context=anomaly_context,
+                provenance=provenance,
+            )
+            if decision == "approve":
+                return None
+            raise ApprovalDeniedError(
+                gate="hitl",
+                blocked=tool_name,
+                rule="webhook_denied" if decision == "deny" else "webhook_unavailable",
+                timed_out=decision == "timeout",
+            )
 
         # Print anomaly banner BEFORE the HITL tool banner and JSON input
         if anomaly_context is not None:
@@ -166,6 +195,63 @@ class HITLGate:
             rule="require_approval",
             timed_out=False,
         )
+
+    def _request_webhook(
+        self,
+        *,
+        tool_name: str,
+        tool_input: dict,
+        caller_id: str | None,
+        hop_depth: int,
+        max_depth: int,
+        anomaly_context: dict | None,
+        provenance: str | None,
+    ) -> str:
+        """POST a signed approval request and return approve|deny|timeout|error.
+
+        HMAC is over the exact JSON bytes and sent as `X-Argus-Signature:
+        sha256=<hex>`. Operators should reject unsigned requests. The endpoint
+        must reply JSON `{"decision": "approve"}` or `{"decision": "deny"}`.
+        Any other response fails closed.
+        """
+        payload = {
+            "request_id": hashlib.sha256(
+                f"{tool_name}:{time.time_ns()}".encode()
+            ).hexdigest()[:24],
+            "tool_name": tool_name,
+            "tool_input": tool_input,
+            "caller_id": caller_id,
+            "hop_depth": hop_depth,
+            "max_depth": max_depth,
+            "provenance": provenance or "user_originated",
+            "anomaly_context": anomaly_context,
+            "expires_at": time.time() + self._config.webhook_timeout_seconds,
+        }
+        body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        headers = {"Content-Type": "application/json"}
+        if self._config.webhook_secret:
+            signature = hmac.new(
+                self._config.webhook_secret.encode(), body, hashlib.sha256
+            ).hexdigest()
+            headers["X-Argus-Signature"] = f"sha256={signature}"
+
+        request = urllib.request.Request(
+            self._config.webhook_url, data=body, headers=headers, method="POST"
+        )
+        try:
+            with urllib.request.urlopen(
+                request, timeout=self._config.webhook_timeout_seconds
+            ) as response:
+                data = json.loads(response.read().decode())
+            return (
+                data.get("decision")
+                if data.get("decision") in {"approve", "deny"}
+                else "error"
+            )
+        except TimeoutError:
+            return "timeout"
+        except (urllib.error.URLError, urllib.error.HTTPError, ValueError, OSError):
+            return "error"
 
     def _read_with_timeout(self) -> str | None:
         """Read a line from stdin, respecting the configured timeout.
