@@ -8,6 +8,7 @@
 | [egress-enforcement.md](egress-enforcement.md) | **v0.6** — enforce vs log-only egress modes, network-layer defense in depth |
 | [adversarial-testing.md](adversarial-testing.md) | **v0.6** — the attack corpus, how to run it, published detection scope |
 | [policy-lifecycle.md](policy-lifecycle.md) | **v0.6** — policy metadata stamp, config hashing, operational lifecycle |
+| [webhook-hitl.md](webhook-hitl.md) | **v0.7** — signed operator approval over HTTP, request/response contract, failure semantics |
 | [skills.md](skills.md) | Skill manifests, trust tiers, lifecycle stages |
 
 ## Gate order (complete)

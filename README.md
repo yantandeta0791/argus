@@ -549,9 +549,13 @@ Initial bootstrap. Security foundation, 5-state execution engine, LLM cost route
 - **Adversarial regression corpus**: versioned attack suite (`INJ-*`, `SEC-*`) with a `run_corpus()` report API — published detection rates, run in CI on every commit
 - See [docs/provenance.md](docs/provenance.md), [docs/egress-enforcement.md](docs/egress-enforcement.md), [docs/adversarial-testing.md](docs/adversarial-testing.md), [docs/policy-lifecycle.md](docs/policy-lifecycle.md)
 
-### v0.7 (planned)
+### v0.7 — Webhook HITL (shipped 2026-08-22)
 
-- Webhook HITL approval (`HITL-06`) — approve/deny over HTTP for REST-side agents
+- Webhook HITL approval (`HITL-06`) — approve/deny over signed HTTP requests for REST-side agents; see [docs/webhook-hitl.md](docs/webhook-hitl.md)
+- HMAC SHA-256 signed canonical payloads; timeout, malformed response, and transport failure default deny
+
+### v0.8 (planned)
+
 - Policy shadow/dry-run mode — log would-be decisions without enforcing
 - OPA/Rego bundle interop for policy portability
 - LlamaIndex adapter (`ADPT-08`); anomaly baseline persistence (`ANOM-08`); Markov tool-sequence anomalies (`ANOM-07`)
