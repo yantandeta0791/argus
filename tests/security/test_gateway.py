@@ -665,7 +665,9 @@ class TestGate175FrequencyAnomaly:
         ]
         assert len(anomaly_events) == 1
         ev = anomaly_events[0]
-        _assert_audit_carries_identity(ev, expected_caller_id="agent-x", expected_hop_depth=1)
+        _assert_audit_carries_identity(
+            ev, expected_caller_id="agent-x", expected_hop_depth=1
+        )
         assert ev["metric_type"] == "frequency"
         assert ev["z_score"] == 5.0
         assert ev["baseline"] == 1.0
@@ -754,7 +756,9 @@ class TestGate175FrequencyAnomaly:
         warn_events = [e for e in sent_calls if e.get("event_type") == "anomaly_warn"]
         assert len(warn_events) == 1
         ev = warn_events[0]
-        _assert_audit_carries_identity(ev, expected_caller_id="agent-x", expected_hop_depth=1)
+        _assert_audit_carries_identity(
+            ev, expected_caller_id="agent-x", expected_hop_depth=1
+        )
         assert ev["metric_type"] == "frequency"
         assert ev["z_score"] == 2.5
 
@@ -894,7 +898,9 @@ class TestGate55EgressAnomaly:
         ]
         assert len(anomaly_events) == 1
         ev = anomaly_events[0]
-        _assert_audit_carries_identity(ev, expected_caller_id="agent-x", expected_hop_depth=1)
+        _assert_audit_carries_identity(
+            ev, expected_caller_id="agent-x", expected_hop_depth=1
+        )
         assert ev["metric_type"] == "egress"
         assert ev["z_score"] == 5.0
         assert ev["baseline"] == 100.0
@@ -994,7 +1000,9 @@ class TestGate55EgressAnomaly:
         assert len(anomaly_events) == 1
         ev = anomaly_events[0]
         assert ev["denied_by"] == "hitl"
-        _assert_audit_carries_identity(ev, expected_caller_id="agent-x", expected_hop_depth=1)
+        _assert_audit_carries_identity(
+            ev, expected_caller_id="agent-x", expected_hop_depth=1
+        )
 
     def test_gate55_warn_sends_audit_no_output_change(self):
         """Gate 5.5: egress WARN sends audit event, returns original clean_output unchanged."""

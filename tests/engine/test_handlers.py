@@ -69,11 +69,15 @@ async def test_execute_handler_runs_tool_through_gateway():
     registry = ToolRegistry()
     registry.register(_echo_manifest(), _echo_tool)
     handlers = default_handlers(registry=registry, gateway=AllowGateway())
-    router = FakeRouter({
-        "EXECUTE": json.dumps({"tool": "echo", "input": {"text": "hi"}}),
-    })
+    router = FakeRouter(
+        {
+            "EXECUTE": json.dumps({"tool": "echo", "input": {"text": "hi"}}),
+        }
+    )
     ctx = _ctx()
-    ctx.current_state = TaskState.EXECUTE  # normally set by StateMachine before dispatch
+    ctx.current_state = (
+        TaskState.EXECUTE
+    )  # normally set by StateMachine before dispatch
     await handlers[TaskState.EXECUTE](ctx, router)
     assert len(ctx.artifacts["tool_calls"]) == 1
     assert ctx.artifacts["tool_calls"][0]["tool"] == "echo"
@@ -84,9 +88,11 @@ async def test_execute_handler_runs_tool_through_gateway():
 async def test_unknown_tool_fails_closed_not_executed():
     registry = ToolRegistry()
     handlers = default_handlers(registry=registry, gateway=AllowGateway())
-    router = FakeRouter({
-        "EXECUTE": json.dumps({"tool": "delete_everything", "input": {}}),
-    })
+    router = FakeRouter(
+        {
+            "EXECUTE": json.dumps({"tool": "delete_everything", "input": {}}),
+        }
+    )
     ctx = _ctx()
     ctx.current_state = TaskState.EXECUTE
     await handlers[TaskState.EXECUTE](ctx, router)
@@ -99,9 +105,11 @@ async def test_no_gateway_fails_closed():
     registry = ToolRegistry()
     registry.register(_echo_manifest(), _echo_tool)
     handlers = default_handlers(registry=registry, gateway=None)
-    router = FakeRouter({
-        "EXECUTE": json.dumps({"tool": "echo", "input": {"text": "hi"}}),
-    })
+    router = FakeRouter(
+        {
+            "EXECUTE": json.dumps({"tool": "echo", "input": {"text": "hi"}}),
+        }
+    )
     ctx = _ctx()
     ctx.current_state = TaskState.EXECUTE
     await handlers[TaskState.EXECUTE](ctx, router)
@@ -113,13 +121,15 @@ async def test_full_run_through_state_machine_with_handlers():
     registry = ToolRegistry()
     registry.register(_echo_manifest(), _echo_tool)
 
-    router = FakeRouter({
-        "PLAN": "plan text",
-        "EXECUTE": json.dumps({"tool": "echo", "input": {"text": "work"}}),
-        "VERIFY": "verified",
-        "REFLECT": "reflected",
-        "COMMIT": "",
-    })
+    router = FakeRouter(
+        {
+            "PLAN": "plan text",
+            "EXECUTE": json.dumps({"tool": "echo", "input": {"text": "work"}}),
+            "VERIFY": "verified",
+            "REFLECT": "reflected",
+            "COMMIT": "",
+        }
+    )
 
     sm = StateMachine(
         gateway=AllowGateway(),
@@ -145,19 +155,19 @@ async def test_security_violation_rolls_back_run():
 
     class DenyGateway:
         def pre_tool_call(self, role, tool, tool_input, **kw):
-            raise PermissionDeniedError(
-                gate="permission", blocked=tool, rule="denied"
-            )
+            raise PermissionDeniedError(gate="permission", blocked=tool, rule="denied")
 
         def post_tool_call(self, tool_output, skill_manifest=None):
             return tool_output
 
     registry = ToolRegistry()
     registry.register(_echo_manifest(), _echo_tool)
-    router = FakeRouter({
-        "PLAN": "plan text",
-        "EXECUTE": json.dumps({"tool": "echo", "input": {"text": "work"}}),
-    })
+    router = FakeRouter(
+        {
+            "PLAN": "plan text",
+            "EXECUTE": json.dumps({"tool": "echo", "input": {"text": "work"}}),
+        }
+    )
     sm = StateMachine(
         gateway=DenyGateway(),
         cost_hook=lambda: False,

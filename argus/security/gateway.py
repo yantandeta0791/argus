@@ -86,7 +86,9 @@ class SecurityGateway:
         # Store hitl config; HITLGate is instantiated lazily in pre_tool_call so
         # the module-level HITLGate reference remains patchable during tests.
         self._hitl_config = config.hitl
-        self._config = config  # retained for flag access (CLEAN-03 anomaly_escalate_raises)
+        self._config = (
+            config  # retained for flag access (CLEAN-03 anomaly_escalate_raises)
+        )
         # AgentRegistry for Gate 0.5 identity resolution (MAGNT-01)
         self._agent_registry = AgentRegistry(config.agents)
         # Gate 1.75 / Gate 5.5: per-metric AnomalyDetector instances (ANOM-01)

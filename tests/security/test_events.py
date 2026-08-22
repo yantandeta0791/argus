@@ -27,9 +27,7 @@ def test_from_context_reads_caller_id_from_contextvar():
 
 def test_from_context_defaults_to_none_when_no_context():
     """CLEAN-04: from_context() defaults to caller_id=None, hop_depth=0 outside a context."""
-    event = SecurityEvent.from_context(
-        gate=GateType.PROMPT_SHIELD, outcome="blocked"
-    )
+    event = SecurityEvent.from_context(gate=GateType.PROMPT_SHIELD, outcome="blocked")
     assert event.caller_id is None
     assert event.hop_depth == 0
 

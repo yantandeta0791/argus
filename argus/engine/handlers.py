@@ -124,23 +124,31 @@ def default_handlers(
         # A plan may propose a read-only discovery tool call.
         await _run_tool_request(context, text)
 
-    async def execute_handler(context: RunContext, llm: Any, *, store: Any = None) -> None:
+    async def execute_handler(
+        context: RunContext, llm: Any, *, store: Any = None
+    ) -> None:
         text = await _call_llm(context, llm)
         output = await _run_tool_request(context, text)
         context.artifacts["execution_output"] = output if output is not None else text
 
-    async def verify_handler(context: RunContext, llm: Any, *, store: Any = None) -> None:
+    async def verify_handler(
+        context: RunContext, llm: Any, *, store: Any = None
+    ) -> None:
         text = await _call_llm(context, llm)
         context.artifacts["verification"] = text
         output = await _run_tool_request(context, text)
         if output is not None:
             context.artifacts["verification_evidence"] = output
 
-    async def reflect_handler(context: RunContext, llm: Any, *, store: Any = None) -> None:
+    async def reflect_handler(
+        context: RunContext, llm: Any, *, store: Any = None
+    ) -> None:
         text = await _call_llm(context, llm)
         context.artifacts["reflection"] = text
 
-    async def commit_handler(context: RunContext, llm: Any, *, store: Any = None) -> None:
+    async def commit_handler(
+        context: RunContext, llm: Any, *, store: Any = None
+    ) -> None:
         """Deterministic finalization — never calls the LLM (COMMIT: null contract)."""
         context.artifacts["committed"] = True
         context.artifacts.setdefault(
