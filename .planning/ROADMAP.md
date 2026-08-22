@@ -88,8 +88,8 @@
 | 8. REST API Sidecar | v0.3 | 2/2 | Complete | 2026-03-27 |
 | 9. Multi-Agent Enforcement | v0.4 | 3/3 | Complete | 2026-04-09 |
 | 10. Anomaly Detection | v0.4 | 2/2 | Complete | 2026-04-11 |
-| 11. v0.4 Integration Debt Closure | v0.5 | 0/3 | Planned | — |
-| 12. Provenance-Aware Execution | v0.5 | 0/0 | Not started | — |
+| 11. v0.4 Integration Debt Closure | v0.5 | 3/3 | Complete | 2026-08-22 |
+| 12. Provenance-Aware Execution | v0.5 | 7/7 reqs | Complete | 2026-08-22 |
 
 ---
 *Roadmap last updated: 2026-05-15 — Phase 11 planned (3 plans: 11-01, 11-02, 11-03)*
