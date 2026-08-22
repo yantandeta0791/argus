@@ -97,9 +97,12 @@ async def _run_async(config: Path, task: str, trace_dir: Path) -> None:
         await memory.connect()
 
         try:
+            from argus.engine.handlers import default_handlers
+
             sm = StateMachine(
                 gateway=gateway,
                 cost_hook=tracker.over_budget,
+                handlers=default_handlers(registry=None, gateway=gateway, obs=obs),
                 llm_callable=router,
                 store=memory.session("run-session"),
                 obs=obs,
