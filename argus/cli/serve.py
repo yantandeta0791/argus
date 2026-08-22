@@ -32,7 +32,7 @@ def build_app(gateway):
     from fastapi import FastAPI, Request
     from fastapi.responses import JSONResponse
 
-    from argus.security.exceptions import ArgusSecurityError
+    from argus.security.exceptions import AnomalyEscalateError, ArgusSecurityError
 
     app = FastAPI(title="Argus REST Sidecar")
 
@@ -90,6 +90,33 @@ def build_app(gateway):
             decision="allow",
             tool_output=redacted_output,
             audit_entry=audit_entry,
+        )
+
+    @app.exception_handler(AnomalyEscalateError)
+    async def anomaly_escalate_handler(request: Request, exc: AnomalyEscalateError):
+        """CLEAN-03: REST sidecar surfaces anomaly-only ESCALATE as 503 with the
+        verbatim HITL banner schema so clients can render the same prompt UI."""
+        return JSONResponse(
+            status_code=503,
+            content={
+                "decision": "block",
+                "violation": "anomaly_escalate",
+                "detail": str(exc),
+                "metric_type": exc.metric_type,
+                "z_score": exc.z_score,
+                "baseline": exc.baseline,
+                "observed": exc.observed,
+                "recent_calls": exc.recent_calls,
+                "caller_id": exc.caller_id,
+                "hop_depth": exc.hop_depth,
+                "audit_entry": {
+                    "event_type": "anomaly_escalate",
+                    "tool_name": exc.tool_name,
+                    "metric_type": exc.metric_type,
+                    "caller_id": exc.caller_id,
+                    "hop_depth": exc.hop_depth,
+                },
+            },
         )
 
     @app.exception_handler(ArgusSecurityError)
@@ -162,6 +189,11 @@ async def _serve_async(config: Path, host: str, port: int, audit_dir: Path) -> N
             raw = yaml.safe_load(f) or {}
 
         gateway_config = load_gateway_config(raw)
+
+        # CLEAN-03: REST sidecar cannot block on terminal HITL. Opt into the
+        # AnomalyEscalateError raise path so anomaly-only ESCALATE surfaces as
+        # 503 instead of hanging the worker on stdin.
+        gateway_config.anomaly_escalate_raises = True
 
         audit_logger = AuditLogger(socket_path)
 

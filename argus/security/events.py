@@ -40,3 +40,35 @@ class SecurityEvent(BaseModel):
         None  # multi-agent: identity of the calling agent (MAGNT-01)
     )
     hop_depth: int = 0  # multi-agent: delegation chain depth (MAGNT-02)
+
+    @classmethod
+    def from_context(
+        cls,
+        *,
+        gate: "GateType",
+        outcome: str,
+        agent_role: str | None = None,
+        tool_name: str | None = None,
+        rule_triggered: str | None = None,
+        blocked_value: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        caller_id: str | None = None,
+        hop_depth: int = 0,
+    ) -> "SecurityEvent":
+        """CLEAN-04: construct a SecurityEvent with caller_id/hop_depth resolved
+        from the active ContextVars when not passed explicitly. Lazy import avoids
+        a circular import (events.py <- gateway.py -> identity.py)."""
+        from argus.security.identity import get_caller_context
+
+        ctx_caller_id, ctx_hop_depth = get_caller_context()
+        return cls(
+            gate=gate,
+            outcome=outcome,
+            agent_role=agent_role,
+            tool_name=tool_name,
+            rule_triggered=rule_triggered,
+            blocked_value=blocked_value,
+            metadata=metadata or {},
+            caller_id=caller_id if caller_id is not None else ctx_caller_id,
+            hop_depth=hop_depth if hop_depth else ctx_hop_depth,
+        )

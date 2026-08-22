@@ -110,6 +110,40 @@ class AnomalyBlockedError(ArgusSecurityError):
     pass
 
 
+class AnomalyEscalateError(ArgusSecurityError):
+    """Raised when the anomaly detector triggers ESCALATE and the caller opted in
+    to raise-instead-of-HITL (CLEAN-03 — used by the REST sidecar, which cannot
+    prompt on stdin). Carries the full HITL banner schema as attributes so the
+    REST handler can render the same payload a terminal HITL prompt would show.
+    """
+
+    def __init__(
+        self,
+        *,
+        tool_name: str,
+        metric_type: str,
+        z_score: float,
+        baseline: float,
+        observed: float,
+        recent_calls: list,
+        caller_id: str | None = None,
+        hop_depth: int = 0,
+    ) -> None:
+        super().__init__(
+            gate="anomaly",
+            blocked=tool_name,
+            rule=f"z={z_score:.2f} escalate",
+        )
+        self.tool_name = tool_name
+        self.metric_type = metric_type
+        self.z_score = z_score
+        self.baseline = baseline
+        self.observed = observed
+        self.recent_calls = recent_calls
+        self.caller_id = caller_id
+        self.hop_depth = hop_depth
+
+
 class ConfigValidationError(ValueError):
     """Raised at startup when argus.yaml contains invalid policy rules."""
 

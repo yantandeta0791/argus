@@ -19,6 +19,7 @@ from argus.security.anomaly.detector import AnomalyDetector, ResponseLevel
 from argus.security.exceptions import (
     ArgusSecurityError,
     AnomalyBlockedError,
+    AnomalyEscalateError,
     ApprovalDeniedError,
     DelegationDepthError,
 )
@@ -56,6 +57,7 @@ class GatewayConfig:
     anomaly: Optional[Any] = (
         None  # AnomalyConfig (lazy typed to avoid circular import) — ANOM-01
     )
+    anomaly_escalate_raises: bool = False  # CLEAN-03: raise instead of terminal HITL
 
 
 class SecurityGateway:
@@ -84,6 +86,7 @@ class SecurityGateway:
         # Store hitl config; HITLGate is instantiated lazily in pre_tool_call so
         # the module-level HITLGate reference remains patchable during tests.
         self._hitl_config = config.hitl
+        self._config = config  # retained for flag access (CLEAN-03 anomaly_escalate_raises)
         # AgentRegistry for Gate 0.5 identity resolution (MAGNT-01)
         self._agent_registry = AgentRegistry(config.agents)
         # Gate 1.75 / Gate 5.5: per-metric AnomalyDetector instances (ANOM-01)
@@ -195,7 +198,7 @@ class SecurityGateway:
             self._permission.enforce(agent_role, tool_name)
         except ArgusSecurityError as exc:
             if self._obs:
-                event = SecurityEvent(
+                event = SecurityEvent.from_context(  # CLEAN-04
                     gate=GateType.PERMISSION,
                     outcome="blocked",
                     agent_role=agent_role,
@@ -233,6 +236,7 @@ class SecurityGateway:
                         "observed": freq_result.observed,
                         "tool_name": tool_name,
                         "caller_id": effective_caller_id,
+                        "hop_depth": effective_hop_depth,  # CLEAN-01
                     }
                 )
                 self._emit_violation(
@@ -258,6 +262,22 @@ class SecurityGateway:
                     "observed": freq_result.observed,
                     "recent_calls": recent,
                 }
+                # CLEAN-03: REST sidecar opts in to raise instead of blocking on terminal HITL.
+                # Only fires for anomaly-only ESCALATE (no require_approval HITL configured).
+                needs_hitl_now = bool(
+                    self._hitl_config and self._hitl_config.needs_approval(tool_name)
+                )
+                if not needs_hitl_now and self._config.anomaly_escalate_raises:
+                    raise AnomalyEscalateError(
+                        tool_name=tool_name,
+                        metric_type="frequency",
+                        z_score=freq_result.z_score,
+                        baseline=freq_result.baseline,
+                        observed=freq_result.observed,
+                        recent_calls=recent,
+                        caller_id=effective_caller_id,
+                        hop_depth=effective_hop_depth,
+                    )
 
         # Gate 1.5: HITL approval gate — merges anomaly context when both fire
         needs_hitl = bool(
@@ -318,6 +338,7 @@ class SecurityGateway:
                     "observed": freq_result.observed,
                     "tool_name": tool_name,
                     "caller_id": effective_caller_id,
+                    "hop_depth": effective_hop_depth,  # CLEAN-01
                 }
             )
 
@@ -354,7 +375,7 @@ class SecurityGateway:
             self._shield.scan(tool_output)
         except ArgusSecurityError as exc:
             if self._obs:
-                event = SecurityEvent(
+                event = SecurityEvent.from_context(  # CLEAN-04
                     gate=GateType.PROMPT_SHIELD,
                     outcome="blocked",
                     tool_name="[post_tool_call]",
@@ -389,6 +410,7 @@ class SecurityGateway:
                         "baseline": egress_result.baseline,
                         "observed": egress_result.observed,
                         "caller_id": egress_caller,
+                        "hop_depth": ctx_hop_depth_post,  # CLEAN-01
                     }
                 )
                 self._emit_violation(
@@ -409,12 +431,26 @@ class SecurityGateway:
                     "recent_calls": recent,
                 }
                 hitl_cfg = self._hitl_config or HITLConfig()
+                # CLEAN-03: Gate 5.5 has no require_approval gating — flag alone
+                # controls raise vs prompt. Raise before reaching terminal HITL.
+                if self._config.anomaly_escalate_raises:
+                    raise AnomalyEscalateError(
+                        tool_name="[egress-volume]",
+                        metric_type="egress",
+                        z_score=egress_result.z_score,
+                        baseline=egress_result.baseline,
+                        observed=egress_result.observed,
+                        recent_calls=recent,
+                        caller_id=egress_caller,
+                        hop_depth=ctx_hop_depth_post,
+                    )
                 try:
                     HITLGate(hitl_cfg).check(
                         tool_name="[egress-volume]",
                         tool_input={"output_length": len(clean_output)},
                         caller_id=egress_caller,
                         hop_depth=ctx_hop_depth_post,
+                        max_depth=self._agent_registry.max_depth,  # CLEAN-02
                         anomaly_context=egress_anomaly_ctx,
                     )
                 except ApprovalDeniedError:
@@ -426,6 +462,7 @@ class SecurityGateway:
                             "baseline": egress_result.baseline,
                             "observed": egress_result.observed,
                             "caller_id": egress_caller,
+                            "hop_depth": ctx_hop_depth_post,  # CLEAN-01
                             "denied_by": "hitl",
                         }
                     )
@@ -446,6 +483,7 @@ class SecurityGateway:
                         "baseline": egress_result.baseline,
                         "observed": egress_result.observed,
                         "caller_id": egress_caller,
+                        "hop_depth": ctx_hop_depth_post,  # CLEAN-01
                     }
                 )
 
