@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Optional
+from uuid import uuid4
 
 from argus.security.anomaly.detector import AnomalyDetector, ResponseLevel
 from argus.security.exceptions import (
@@ -34,6 +35,7 @@ from argus.security.redactor.redactor import SecretRedactor
 from argus.security.egress.checker import EgressChecker
 from argus.security.audit.logger import AuditLogger
 from argus.security.events import SecurityEvent, GateType
+from argus.security.policy_decision import PolicyDecision
 
 
 @dataclass
@@ -162,6 +164,38 @@ class SecurityGateway:
             hop_depth=hop_depth,
         )
 
+    def _record_policy_decision(
+        self,
+        *,
+        mode: str,
+        outcome: str,
+        gate: str,
+        tool_name: str,
+        agent_role: str,
+        rule: str | None,
+        reason: str,
+        caller_id: str | None,
+        hop_depth: int,
+        provenance: str,
+    ) -> PolicyDecision:
+        """Create and audit one normalized decision at a configured policy gate."""
+        decision = PolicyDecision(
+            decision_id=str(uuid4()),
+            mode=mode,
+            outcome=outcome,
+            gate=gate,
+            tool_name=tool_name,
+            agent_role=agent_role,
+            rule=rule,
+            reason=reason,
+            caller_id=caller_id,
+            hop_depth=hop_depth,
+            provenance=provenance,
+            policy_metadata=self._policy_metadata,
+        )
+        self._audit.send(decision.to_audit_event())
+        return decision
+
     def pre_tool_call(
         self,
         agent_role: str,
@@ -221,22 +255,51 @@ class SecurityGateway:
             and required != "any"
             and active_provenance.value != required
         ):
-            self._emit_violation(
-                "provenance",
-                tool_name,
-                agent_role,
+            rule = (
+                f"provenance_required={required} but "
+                f"active={active_provenance.value}"
+            )
+            self._record_policy_decision(
+                mode=self._config.policy_mode,
+                outcome=(
+                    "would_block" if self._config.policy_mode == "shadow" else "block"
+                ),
+                gate="provenance",
+                tool_name=tool_name,
+                agent_role=agent_role,
+                rule=rule,
+                reason="Tool requires user-originated instruction",
                 caller_id=effective_caller_id,
                 hop_depth=effective_hop_depth,
-            )
-            raise ProvenanceViolationError(
-                gate="provenance",
-                blocked=tool_name,
-                rule=(
-                    f"provenance_required={required} but "
-                    f"active={active_provenance.value}"
-                ),
                 provenance=active_provenance.value,
-                required=required,
+            )
+            if self._config.policy_mode != "shadow":
+                self._emit_violation(
+                    "provenance",
+                    tool_name,
+                    agent_role,
+                    caller_id=effective_caller_id,
+                    hop_depth=effective_hop_depth,
+                )
+                raise ProvenanceViolationError(
+                    gate="provenance",
+                    blocked=tool_name,
+                    rule=rule,
+                    provenance=active_provenance.value,
+                    required=required,
+                )
+        elif required is not None and required != "any":
+            self._record_policy_decision(
+                mode=self._config.policy_mode,
+                outcome="allow",
+                gate="provenance",
+                tool_name=tool_name,
+                agent_role=agent_role,
+                rule=f"provenance_required={required}",
+                reason="Tool provenance requirement satisfied",
+                caller_id=effective_caller_id,
+                hop_depth=effective_hop_depth,
+                provenance=active_provenance.value,
             )
 
         # Gate 1: Permission (hard stop)
