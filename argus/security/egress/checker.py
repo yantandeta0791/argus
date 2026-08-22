@@ -1,31 +1,63 @@
+"""
+Egress allowlist checker with two enforcement modes.
+
+Modes:
+  log_only (default) — v0.x behavior. Out-of-allowlist hostnames emit a
+                       SecurityEvent but never raise.
+  enforce            — v0.6 behavior. Out-of-allowlist hostnames emit the
+                       SecurityEvent AND raise EgressViolationError, failing
+                       the tool call closed.
+
+The mode is configured per-gateway via GatewayConfig.egress_enforce (bool).
+This is application-level enforcement: it gates declared egress targets at
+the tool boundary. Network-layer enforcement (containers/netns) remains the
+deployment's responsibility and is documented in docs/egress-enforcement.md.
+"""
+
+from __future__ import annotations
+
 from typing import Callable
-from argus.security.events import SecurityEvent, GateType
+
+from argus.security.events import GateType, SecurityEvent
 
 
 class EgressChecker:
-    """
-    v1 egress allowlist checker — log-only, no network enforcement.
+    """Allowlist checker for declared egress targets.
 
-    Design note: EgressViolationError exists in the exception hierarchy but is NOT raised in v1.
-    v1.1 upgrade: when container-level network enforcement is added (SBX-01),
-    this method will raise EgressViolationError after logging the event.
+    Args:
+        allowlist:  Hostnames the skill/tool may contact.
+        event_sink: Callback receiving a SecurityEvent on violation.
+        enforce:    When True, violations raise EgressViolationError after
+                    emitting the event (fail-closed). When False (default),
+                    violations are logged only — v0.x behavior.
     """
 
     def __init__(
-        self, allowlist: list[str], event_sink: Callable[[SecurityEvent], None]
+        self,
+        allowlist: list[str],
+        event_sink: Callable[[SecurityEvent], None],
+        enforce: bool = False,
     ):
         self._allowlist = set(allowlist)
         self._event_sink = event_sink
+        self._enforce = enforce
+
+    @property
+    def enforce(self) -> bool:
+        return self._enforce
 
     def check(self, hostname: str, skill_name: str) -> None:
+        """Check hostname against the allowlist.
+
+        In-allowlist: return silently.
+        Violation:    emit SecurityEvent, then raise EgressViolationError when
+                      enforcement is enabled — otherwise return (log-only).
         """
-        Check if hostname is in the allowlist.
-        If not: emit a SecurityEvent. Never raises in v1 (log-only).
-        """
+        from argus.security.exceptions import EgressViolationError
+
         if hostname in self._allowlist:
             return  # allowed, no event
 
-        # Violation: log it, do not block (v1 constraint — no network enforcement)
         self._event_sink(
             SecurityEvent(
                 gate=GateType.EGRESS,
@@ -36,8 +68,14 @@ class EgressChecker:
                 metadata={
                     "allowlist": sorted(self._allowlist),
                     "attempted_host": hostname,
+                    "mode": "enforce" if self._enforce else "log_only",
                 },
             )
         )
-        # v1: return None — do not raise EgressViolationError
-        # v1.1: raise EgressViolationError(gate="egress", blocked=hostname, rule="allowlist")
+        if self._enforce:
+            raise EgressViolationError(
+                gate="egress",
+                blocked=hostname,
+                rule=f"not in allowlist: {sorted(self._allowlist)}",
+            )
+        # log_only mode: violation recorded, call continues (v0.x behavior)

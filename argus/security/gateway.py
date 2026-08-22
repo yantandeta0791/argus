@@ -63,6 +63,10 @@ class GatewayConfig:
     provenance_required: Optional[dict[str, str]] = (
         None  # PROV-03: tool_name -> Provenance value ("any" entries are ignored)
     )
+    egress_enforce: bool = False  # v0.6: True -> egress violations raise (fail-closed)
+    policy_metadata: Optional[dict[str, Any]] = (
+        None  # v0.6: version/name/hash provenance stamped into every audit event
+    )
 
 
 class SecurityGateway:
@@ -107,6 +111,9 @@ class SecurityGateway:
             self._anomaly_egress = None
         # EgressChecker with a closure sink that forwards to obs if configured (Phase 7)
         self._security_events: list[SecurityEvent] = []
+        # v0.6 policy metadata: stamped into every audit event so logs answer
+        # "which policy version produced this decision?" (policy lifecycle).
+        self._policy_metadata: dict[str, Any] = dict(config.policy_metadata or {})
 
         def _egress_sink(event: SecurityEvent) -> None:
             self._security_events.append(event)
@@ -116,6 +123,7 @@ class SecurityGateway:
         self._egress = EgressChecker(
             allowlist=config.egress_allowlist,
             event_sink=_egress_sink,
+            enforce=config.egress_enforce,  # v0.6 enforcement mode
         )
 
     def _emit_violation(
@@ -389,6 +397,7 @@ class SecurityGateway:
                 "caller_id": effective_caller_id,
                 "hop_depth": effective_hop_depth,
                 "provenance": active_provenance.value,  # PROV-05
+                **self._policy_metadata,  # v0.6: policy version/name/hash stamp
                 # tool_input deliberately omitted from audit — may contain sensitive params
                 # Phase 7 adds structured input logging with redaction applied first
             }

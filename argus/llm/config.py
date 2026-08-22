@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import os
 import re
+from typing import Any
+
 import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -201,6 +203,16 @@ def load_egress_config(raw: dict) -> list[str]:
     return list(egress_raw.get("allowlist") or [])
 
 
+def load_egress_enforce(raw: dict) -> bool:
+    """Parse egress.enforce flag (v0.6).
+
+    Default False (log-only, v0.x behavior). True makes egress violations
+    raise EgressViolationError — fail-closed application-level enforcement.
+    """
+    egress_raw = raw.get("egress", {}) or {}
+    return bool(egress_raw.get("enforce", False))
+
+
 def load_spend_profiles(raw: dict, active_profile: str | None = None) -> SpendConfig:
     """Parse spend: YAML section, optionally selecting a named profile.
 
@@ -324,6 +336,37 @@ def load_provenance_config(raw: dict) -> dict[str, str] | None:
     return required or None
 
 
+def load_policy_metadata(raw: dict) -> dict[str, Any] | None:
+    """Parse policy: YAML section into audit-stamp metadata (v0.6).
+
+    Accepted keys: name, version, and optionally any extra string fields
+    (e.g. approved_by, change_ticket). A sha256 'hash' of the entire raw
+    config dict is computed automatically when absent — so every audit
+    event can be tied to the exact policy that produced it.
+
+    Returns None when no policy section is present.
+    """
+    policy_raw = raw.get("policy", {}) or {}
+    if not policy_raw:
+        return None
+
+    import hashlib
+    import json as _json
+
+    metadata = {
+        f"policy_{k}": v
+        for k, v in policy_raw.items()
+        if isinstance(v, (str, int, float, bool))
+    }
+    metadata.setdefault(
+        "policy_hash",
+        hashlib.sha256(
+            _json.dumps(raw, sort_keys=True, default=str).encode()
+        ).hexdigest(),
+    )
+    return metadata
+
+
 def load_gateway_config(raw: dict):
     """Assemble a GatewayConfig from a raw yaml.safe_load dict.
 
@@ -341,11 +384,15 @@ def load_gateway_config(raw: dict):
     agents_cfg = load_agents_config(raw)
     anomaly = load_anomaly_config(raw)
     provenance_required = load_provenance_config(raw)
+    egress_enforce = load_egress_enforce(raw)
+    policy_metadata = load_policy_metadata(raw)
 
     return GatewayConfig(
         permissions=permissions,
         prompt_shield_patterns=secrets.patterns,
         egress_allowlist=egress,
+        egress_enforce=egress_enforce,
+        policy_metadata=policy_metadata,
         hitl=hitl,
         otel=otel,
         agents=agents_cfg,

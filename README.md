@@ -100,7 +100,7 @@ Argus is built in four layers, each depending only on the layers below it.
 
 ![Argus architecture: CLI / Demo Surface (argus demo, run, scan) over Observability Layer (TraceWriter, OtelEmitter, SecurityStream), Intelligence Layer (LLMRouter, SpendTracker, MemoryManager), Execution Engine (StateMachine, ToolRunner), and Security Foundation (PermissionEnforcer, PromptShield, SecretRedactor, EgressChecker, AuditLogger)](docs/assets/architecture.png)
 
-**Security Foundation** is built first and never modified for correctness. It is deterministic: no code path through any security gate touches an LLM. The permission enforcer is a Casbin RBAC/ABAC engine. The prompt shield is a compiled regex battery. The secret redactor is a regex + entropy scanner. The egress checker compares hostnames against a declared allowlist. The audit logger writes to a Unix socket owned by a separate process.
+**Security Foundation** is built first and never modified for correctness. It is deterministic: no code path through any security gate touches an LLM. The permission enforcer is a Casbin RBAC/ABAC engine. The prompt shield is a compiled regex battery. The secret redactor is a regex + entropy scanner. The egress checker compares hostnames against a declared allowlist (log-only by default; `egress.enforce: true` makes violations fail closed). The audit logger writes to a Unix socket owned by a separate process, and every event is stamped with the governing policy's version and config hash.
 
 **Execution Engine** drives tasks through a fixed five-state sequence: PLAN → EXECUTE → VERIFY → REFLECT → COMMIT. State transitions are hardcoded in `TRANSITION_SEQUENCE`; no LLM output can select the next state. Tool calls pass through the security gateway on both sides (pre-call and post-call). Tool contracts are Pydantic schemas validated before execution and after return.
 
@@ -492,7 +492,7 @@ pytest -m "not integration"
 pytest tests/security/
 ```
 
-The test suite has 206 passing tests covering all v1.0 and v1.1 requirements.
+The test suite has 449 passing tests covering all v1.0 through v0.6 requirements.
 
 ## Roadmap
 
@@ -534,18 +534,28 @@ Initial bootstrap. Security foundation, 5-state execution engine, LLM cost route
 - `anomaly_blocked` / `anomaly_warn` audit events + `GateType.ANOMALY` OTel spans
 - 13/13 v0.4 requirements shipped (4 with integration debt carried to v0.5)
 
-### v0.5 (planned)
+### v0.5 — Provenance-Aware Execution (shipped 2026-08-22)
 
-- Provenance-aware execution: tag retrieval-derived content at the adapter boundary, gate write/export tools by instruction provenance
-- Anomaly baseline persistence to SQLite across restarts (`ANOM-08`)
-- Tool sequence / Markov anomaly detection for unusual tool combinations (`ANOM-07`)
-- LlamaIndex adapter (`ADPT-08`)
-- AutoGen + MCP adapter `ContextVar` propagation (`MAGNT-08`)
-- Webhook HITL approval (`HITL-06`)
-- v0.4 integration debt closure: `hop_depth` in anomaly audit emissions, Gate 5.5 `max_depth` forwarding, REST sidecar anomaly-`ESCALATE` guard, Nyquist sign-off for Phases 9–10
-- Redis hot memory layer + Qdrant semantic memory
-- OCI skill registry via `oras-py`
-- Local model support via LiteLLM / Ollama
+- Instruction provenance: closed enum (`untrusted_retrieval | user_originated | system`) tracked via ContextVars
+- **Gate 0.75** — tools declaring `provenance_required: user_originated` in `argus.yaml` are blocked (fail-closed, before permission) when the triggering instruction came from retrieved content
+- Provenance tagged automatically at every adapter boundary (LangChain, CrewAI, AutoGen, MCP, REST)
+- Provenance carried in audit events, OTel spans, HITL banner, and REST API (422 on unknown values)
+- v0.4 integration debt closed: `hop_depth` in anomaly audit payloads, Gate 5.5 `max_depth` forwarding, REST anomaly-ESCALATE → 503 (no more stdin hangs)
+
+### v0.6 — Enforcement, Evidence, Assurance (shipped 2026-08-22)
+
+- **Enforceable egress**: `egress.enforce: true` makes allowlist violations raise `EgressViolationError` (fail-closed) instead of log-only
+- **Policy metadata stamp**: `policy:` section (name/version/…) + automatic sha256 `policy_hash` of the entire effective config stamped into every audit event
+- **Adversarial regression corpus**: versioned attack suite (`INJ-*`, `SEC-*`) with a `run_corpus()` report API — published detection rates, run in CI on every commit
+- See [docs/provenance.md](docs/provenance.md), [docs/egress-enforcement.md](docs/egress-enforcement.md), [docs/adversarial-testing.md](docs/adversarial-testing.md), [docs/policy-lifecycle.md](docs/policy-lifecycle.md)
+
+### v0.7 (planned)
+
+- Webhook HITL approval (`HITL-06`) — approve/deny over HTTP for REST-side agents
+- Policy shadow/dry-run mode — log would-be decisions without enforcing
+- OPA/Rego bundle interop for policy portability
+- LlamaIndex adapter (`ADPT-08`); anomaly baseline persistence (`ANOM-08`); Markov tool-sequence anomalies (`ANOM-07`)
+- Redis hot memory + Qdrant semantic memory; OCI skill registry; Ollama validation pass
 
 ## License
 
