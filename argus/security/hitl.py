@@ -57,6 +57,7 @@ class HITLGate:
         hop_depth: int = 0,
         max_depth: int = 3,
         anomaly_context: dict | None = None,
+        provenance: str | None = None,
     ) -> None:
         """Prompt for approval if this tool requires it.
 
@@ -66,6 +67,10 @@ class HITLGate:
         anomaly_context: optional ANOM-01 dict from Gate 1.75/5.5. When provided,
         an [ARGUS ANOMALY] banner is printed before the tool input JSON. The gate
         fires even if tool is not in require_approval (anomaly-only escalation path).
+
+        provenance: optional PROV-06 instruction provenance value. When it is not
+        user_originated, a 'Provenance:' line is printed above the delegation line;
+        when user_originated (or None), output is unchanged from v0.4.
 
         Returns None on approval.
         Raises ApprovalDeniedError on deny, timeout, or two invalid inputs.
@@ -104,6 +109,10 @@ class HITLGate:
 
         # Print the HITL banner so the operator can make an informed decision
         print(f"\n[ARGUS HITL] Approval required for tool '{tool_name}'")
+        # PROV-06: show instruction provenance when it is not user_originated —
+        # placed immediately above the delegation line per REQUIREMENTS.md.
+        if provenance is not None and provenance != "user_originated":
+            print(f"Provenance: {provenance}")
         # Sub-agent delegation context — shown only when call is delegated (hop_depth > 0)
         if hop_depth > 0 and caller_id:
             print(f"Delegated by: {caller_id} (hop {hop_depth}/{max_depth})")

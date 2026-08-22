@@ -7,7 +7,16 @@ from pathlib import Path
 from typing import Any
 
 import typer
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+
+def _validate_provenance(value: str) -> str:
+    """PROV-07: validate provenance against the closed enum. Raises ValueError
+    (→ FastAPI 422) on unknown values; 'any' is not a valid runtime value."""
+    from argus.security.provenance import Provenance
+
+    Provenance(value)  # raises ValueError with valid values listed
+    return value
 
 
 class ToolCallRequest(BaseModel):
@@ -17,6 +26,12 @@ class ToolCallRequest(BaseModel):
     tool_output: str | None = None
     caller_id: str | None = None  # MAGNT-01: calling agent identity
     hop_depth: int = 0  # MAGNT-01: delegation depth from root supervisor
+    provenance: str = "user_originated"  # PROV-07: instruction provenance
+
+    @field_validator("provenance")
+    @classmethod
+    def provenance_in_enum(cls, v: str) -> str:
+        return _validate_provenance(v)
 
 
 class ToolCallResponse(BaseModel):
@@ -66,19 +81,28 @@ def build_app(gateway):
                 },
             )
 
-        # Pre-gate (with optional caller identity for multi-agent enforcement)
-        gateway.pre_tool_call(
-            req.agent_role,
-            req.tool_name,
-            req.tool_input,
-            caller_id=req.caller_id,
-            hop_depth=req.hop_depth,
-        )
+        # PROV-07: bind the request's declared provenance for this call so
+        # Gate 0.75 evaluates against the client-supplied value. Token-based
+        # finally reset matches the v0.4 caller-context pattern.
+        from argus.security.provenance import set_provenance, reset_provenance
 
-        # Post-gate (only if tool_output provided)
-        redacted_output: str | None = None
-        if req.tool_output is not None:
-            redacted_output = gateway.post_tool_call(req.tool_output)
+        prov_tokens = set_provenance(req.provenance)
+        try:
+            # Pre-gate (with optional caller identity for multi-agent enforcement)
+            gateway.pre_tool_call(
+                req.agent_role,
+                req.tool_name,
+                req.tool_input,
+                caller_id=req.caller_id,
+                hop_depth=req.hop_depth,
+            )
+
+            # Post-gate (only if tool_output provided)
+            redacted_output: str | None = None
+            if req.tool_output is not None:
+                redacted_output = gateway.post_tool_call(req.tool_output)
+        finally:
+            reset_provenance(prov_tokens)
 
         audit_entry: dict[str, Any] = {
             "event_type": "tool_call_pre",

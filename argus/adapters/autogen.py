@@ -58,8 +58,15 @@ def _wrap_single_autogen_tool(
             raw_output = await tool.run_json(kwargs, token)
 
         output_str = str(raw_output) if not isinstance(raw_output, str) else raw_output
-        # Post-tool gates
-        return gateway.post_tool_call(output_str)
+        # PROV-02: external content returns into LLM context — tag provenance
+        from argus.security.provenance import reset_provenance, set_provenance
+
+        prov_tokens = set_provenance("untrusted_retrieval")
+        try:
+            # Post-tool gates
+            return gateway.post_tool_call(output_str)
+        finally:
+            reset_provenance(prov_tokens)
 
     _secured.__name__ = original_name
     return FunctionTool(_secured, description=description, name=original_name)

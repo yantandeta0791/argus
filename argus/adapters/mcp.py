@@ -109,11 +109,17 @@ class ArgusMCPMiddleware:
 
         output_str = _extract_text(result)
 
+        # PROV-02: MCP server response is external content — tag provenance
+        from argus.security.provenance import reset_provenance, set_provenance
+
+        prov_tokens = set_provenance("untrusted_retrieval")
         # Post-call gate — filter / block dangerous output
         try:
             clean = self._gateway.post_tool_call(output_str)
         except ArgusSecurityError as exc:
             raise ToolError(str(exc)) from exc
+        finally:
+            reset_provenance(prov_tokens)
 
         return _replace_text(result, clean)
 

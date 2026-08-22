@@ -294,6 +294,36 @@ def load_agents_config(raw: dict):
     return AgentRegistryConfig(agents=agents, max_delegation_depth=max_depth)
 
 
+def load_provenance_config(raw: dict) -> dict[str, str] | None:
+    """Parse tools: YAML section provenance_required declarations (PROV-03).
+
+    Accepts the raw dict from yaml.safe_load(argus.yaml). Returns a mapping of
+    tool_name -> provenance value, or None when no tool declares a requirement.
+
+    Raises ConfigValidationError on unknown enum values (startup validation with
+    a clear path to the offending tool — PROV-03).
+    """
+    tools_raw = raw.get("tools", {}) or {}
+    required: dict[str, str] = {}
+    for name, cfg in tools_raw.items():
+        value = (cfg or {}).get("provenance_required")
+        if value is None:
+            continue
+        try:
+            from argus.security.provenance import Provenance
+
+            if value != "any":
+                Provenance(value)
+        except ValueError as exc:
+            from argus.security.exceptions import ConfigValidationError
+
+            raise ConfigValidationError(
+                f"Tool '{name}' declares invalid provenance_required {value!r}: {exc}"
+            ) from exc
+        required[name] = value
+    return required or None
+
+
 def load_gateway_config(raw: dict):
     """Assemble a GatewayConfig from a raw yaml.safe_load dict.
 
@@ -310,6 +340,7 @@ def load_gateway_config(raw: dict):
     otel = load_otel_config(raw)
     agents_cfg = load_agents_config(raw)
     anomaly = load_anomaly_config(raw)
+    provenance_required = load_provenance_config(raw)
 
     return GatewayConfig(
         permissions=permissions,
@@ -322,4 +353,5 @@ def load_gateway_config(raw: dict):
         if agents_cfg is not None
         else 3,
         anomaly=anomaly,
+        provenance_required=provenance_required,
     )

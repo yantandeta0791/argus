@@ -57,7 +57,7 @@ class ArgusToolWrapper:
             tokens = set_caller_context(self._caller_id, self._hop_depth)
 
         try:
-            # Pre-tool security gates (permission check, audit)
+            # Pre-tool security gates (provenance Gate 0.75, permission, audit)
             self._gateway.pre_tool_call(self._agent_role, self.name, tool_input)
 
             # Execute the actual tool
@@ -66,8 +66,16 @@ class ArgusToolWrapper:
                 str(raw_output) if not isinstance(raw_output, str) else raw_output
             )
 
-            # Post-tool security gates (injection scan, redaction, egress, audit)
-            clean_output = self._gateway.post_tool_call(output_str)
+            # PROV-02: external content returns into LLM context — tag provenance
+            # as untrusted_retrieval for the duration of the LLM's next decision.
+            from argus.security.provenance import reset_provenance, set_provenance
+
+            prov_tokens = set_provenance("untrusted_retrieval")
+            try:
+                # Post-tool security gates (injection scan, redaction, egress, audit)
+                clean_output = self._gateway.post_tool_call(output_str)
+            finally:
+                reset_provenance(prov_tokens)
         finally:
             if tokens is not None:
                 from argus.security.identity import reset_caller_context

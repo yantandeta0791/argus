@@ -144,6 +144,25 @@ class AnomalyEscalateError(ArgusSecurityError):
         self.hop_depth = hop_depth
 
 
+class ProvenanceViolationError(ArgusSecurityError):
+    """Raised when a tool's required provenance does not match the active
+    provenance (Gate 0.75 — PROV-04). Fail-closed, same semantics as
+    DelegationDepthError: fires before the permission check.
+    """
+
+    def __init__(
+        self,
+        gate: str,
+        blocked: str,
+        rule: str,
+        provenance: str = "",
+        required: str = "",
+    ) -> None:
+        super().__init__(gate=gate, blocked=blocked, rule=rule)
+        self.provenance = provenance
+        self.required = required
+
+
 class ConfigValidationError(ValueError):
     """Raised at startup when argus.yaml contains invalid policy rules."""
 

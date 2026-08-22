@@ -22,9 +22,11 @@ from argus.security.exceptions import (
     AnomalyEscalateError,
     ApprovalDeniedError,
     DelegationDepthError,
+    ProvenanceViolationError,
 )
 from argus.security.hitl import HITLConfig, HITLGate
 from argus.security.identity import AgentRegistry, get_caller_context
+from argus.security.provenance import get_provenance
 from argus.security.permission.enforcer import PermissionEnforcer
 from argus.security.permission.policy import PolicyConfig
 from argus.security.prompt_shield.shield import PromptShield
@@ -58,6 +60,9 @@ class GatewayConfig:
         None  # AnomalyConfig (lazy typed to avoid circular import) — ANOM-01
     )
     anomaly_escalate_raises: bool = False  # CLEAN-03: raise instead of terminal HITL
+    provenance_required: Optional[dict[str, str]] = (
+        None  # PROV-03: tool_name -> Provenance value ("any" entries are ignored)
+    )
 
 
 class SecurityGateway:
@@ -136,6 +141,7 @@ class SecurityGateway:
             "hitl": "HIGH",
             "identity": "HIGH",
             "anomaly": "HIGH",
+            "provenance": "HIGH",  # PROV-04: Gate 0.75 violation
         }
         severity = severity_map.get(gate, "INFO")
         self._security_otel.emit_security_violation(
@@ -193,6 +199,35 @@ class SecurityGateway:
                 rule=f"hop_depth={effective_hop_depth} > max={max_depth}",
                 caller_id=effective_caller_id,
                 hop_depth=effective_hop_depth,
+            )
+
+        active_provenance = get_provenance()
+
+        # Gate 0.75: Provenance (PROV-04) — fail-closed BEFORE permission.
+        # A tool declared provenance_required in argus.yaml can only be invoked
+        # when the active instruction provenance satisfies the requirement.
+        required = (self._config.provenance_required or {}).get(tool_name)
+        if (
+            required is not None
+            and required != "any"
+            and active_provenance.value != required
+        ):
+            self._emit_violation(
+                "provenance",
+                tool_name,
+                agent_role,
+                caller_id=effective_caller_id,
+                hop_depth=effective_hop_depth,
+            )
+            raise ProvenanceViolationError(
+                gate="provenance",
+                blocked=tool_name,
+                rule=(
+                    f"provenance_required={required} but "
+                    f"active={active_provenance.value}"
+                ),
+                provenance=active_provenance.value,
+                required=required,
             )
 
         # Gate 1: Permission (hard stop)
@@ -297,6 +332,7 @@ class SecurityGateway:
                     hop_depth=effective_hop_depth,
                     max_depth=max_depth,
                     anomaly_context=anomaly_context,
+                    provenance=active_provenance.value,  # PROV-06
                 )
                 if needs_hitl:
                     # Approved — log the decision before continuing to Gate 2
@@ -352,6 +388,7 @@ class SecurityGateway:
                 "tool_name": tool_name,
                 "caller_id": effective_caller_id,
                 "hop_depth": effective_hop_depth,
+                "provenance": active_provenance.value,  # PROV-05
                 # tool_input deliberately omitted from audit — may contain sensitive params
                 # Phase 7 adds structured input logging with redaction applied first
             }
@@ -454,6 +491,7 @@ class SecurityGateway:
                         hop_depth=ctx_hop_depth_post,
                         max_depth=self._agent_registry.max_depth,  # CLEAN-02
                         anomaly_context=egress_anomaly_ctx,
+                        provenance=get_provenance().value,  # PROV-06
                     )
                 except ApprovalDeniedError:
                     self._audit.send(
