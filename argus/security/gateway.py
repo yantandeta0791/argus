@@ -305,22 +305,20 @@ class SecurityGateway:
         try:
             self._permission.enforce(agent_role, tool_name)
         except ArgusSecurityError as exc:
-            self._record_policy_decision(
-                mode=self._config.policy_mode,
-                outcome=(
-                    "would_block" if self._config.policy_mode == "shadow" else "block"
-                ),
-                gate="permission",
-                tool_name=tool_name,
-                agent_role=agent_role,
-                rule=getattr(exc, "rule", None),
-                reason="Tool permission denied by policy",
-                caller_id=effective_caller_id,
-                hop_depth=effective_hop_depth,
-                provenance=active_provenance.value,
-            )
+            outcome = "would_block" if self._config.policy_mode == "shadow" else "block"
             if self._config.policy_mode == "shadow":
-                pass
+                self._record_policy_decision(
+                    mode=self._config.policy_mode,
+                    outcome=outcome,
+                    gate="permission",
+                    tool_name=tool_name,
+                    agent_role=agent_role,
+                    rule=getattr(exc, "rule", None),
+                    reason="Tool permission denied by policy",
+                    caller_id=effective_caller_id,
+                    hop_depth=effective_hop_depth,
+                    provenance=active_provenance.value,
+                )
             else:
                 if self._obs:
                     event = SecurityEvent.from_context(  # CLEAN-04
@@ -331,6 +329,18 @@ class SecurityGateway:
                         rule_triggered=getattr(exc, "rule", None),
                     )
                     self._obs.on_security_event(event)
+                self._record_policy_decision(
+                    mode=self._config.policy_mode,
+                    outcome=outcome,
+                    gate="permission",
+                    tool_name=tool_name,
+                    agent_role=agent_role,
+                    rule=getattr(exc, "rule", None),
+                    reason="Tool permission denied by policy",
+                    caller_id=effective_caller_id,
+                    hop_depth=effective_hop_depth,
+                    provenance=active_provenance.value,
+                )
                 self._emit_violation(
                     "permission",
                     tool_name,

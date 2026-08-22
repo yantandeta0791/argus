@@ -324,3 +324,16 @@ def test_render_policy_decision_includes_mode_rule_policy_hash(tmp_path):
     assert "role=analyst tool=export_data effect=deny" in result.output
     assert "baseline@1.3.0" in result.output
     assert "policy_hash: abcdefghijkl" in result.output
+
+
+def test_audit_shadow_summary_renders_grouped_rollout_report(tmp_path):
+    from argus.cli.main import app
+
+    tmp_log = tmp_path / "audit.jsonl"
+    _write_jsonl(tmp_log, [_policy_decision("allow"), _policy_decision("would_block")])
+    result = runner.invoke(
+        app, ["audit", "--shadow", "--summary", str(tmp_log), "--log", str(tmp_log)]
+    )
+    assert result.exit_code == 0
+    assert "Shadow policy summary" in result.output
+    assert "1 would-block decisions / 2 evaluated calls" in result.output

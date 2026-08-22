@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich import box
 
 from argus.cli.output import console
+from argus.policy.report import summarize_decisions
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +228,27 @@ def _render_event(event: dict) -> None:
     console.print(Panel(content, box=box.ROUNDED, border_style=border_color))
 
 
+def _render_summary(log_path: Path) -> None:
+    """Render a rollout report from a JSONL stream without coalescing policies."""
+    summary = summarize_decisions(_iter_events(log_path))
+    hashes = (
+        ", ".join(policy_hash[:12] for policy_hash in summary.policy_hashes) or "none"
+    )
+    console.print(f"Shadow policy summary: hash {hashes}")
+    console.print(
+        f"{summary.total_would_blocks} would-block decisions / "
+        f"{summary.total_decisions} evaluated calls"
+    )
+    if summary.warning:
+        console.print(f"WARNING: {summary.warning}")
+    for policy_hash in summary.policy_hashes:
+        console.print(f"\nPolicy hash: {policy_hash[:12]}")
+        for (gate, tool_name, rule), count in sorted(
+            summary.groups[policy_hash].items()
+        ):
+            console.print(f"{gate}\t{tool_name}\t{rule or ''}\t{count}")
+
+
 # ---------------------------------------------------------------------------
 # Main command
 # ---------------------------------------------------------------------------
@@ -260,8 +282,18 @@ def audit_command(
     shadow: bool = typer.Option(
         False, "--shadow", help="Show shadow policy decisions."
     ),
+    summary: Optional[Path] = typer.Option(
+        None, "--summary", help="Render a shadow-policy summary from this JSONL log."
+    ),
 ) -> None:
     """Stream and render the Argus JSONL audit log as Rich panels."""
+    if summary is not None:
+        if not summary.exists() or summary.stat().st_size == 0:
+            console.print("No audit events found. Run `argus run` to generate events.")
+            return
+        _render_summary(summary)
+        return
+
     # Resolve log existence and emptiness
     if not log.exists() or log.stat().st_size == 0:
         console.print("No audit events found. Run `argus run` to generate events.")
