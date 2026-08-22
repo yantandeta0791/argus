@@ -20,6 +20,18 @@ from argus.security.hitl import HITLConfig
 from argus.security.exceptions import ApprovalDeniedError
 
 
+def _assert_audit_carries_identity(
+    payload: dict,
+    expected_caller_id: str | None,
+    expected_hop_depth: int,
+) -> None:
+    """CLEAN-01 invariant: every anomaly audit payload carries caller_id + hop_depth."""
+    assert "caller_id" in payload, f"caller_id missing from {payload!r}"
+    assert "hop_depth" in payload, f"hop_depth missing from {payload!r}"
+    assert payload["caller_id"] == expected_caller_id, payload
+    assert payload["hop_depth"] == expected_hop_depth, payload
+
+
 # ── TDD RED: all these should fail before gateway.py is implemented ──────────
 
 
@@ -640,7 +652,11 @@ class TestGate175FrequencyAnomaly:
         ):
             with pytest.raises(AnomalyBlockedError):
                 gateway.pre_tool_call(
-                    "analyst", "search", {"q": "test"}, caller_id="agent-x"
+                    "analyst",
+                    "search",
+                    {"q": "test"},
+                    caller_id="agent-x",
+                    hop_depth=1,
                 )
 
         sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
@@ -649,6 +665,7 @@ class TestGate175FrequencyAnomaly:
         ]
         assert len(anomaly_events) == 1
         ev = anomaly_events[0]
+        _assert_audit_carries_identity(ev, expected_caller_id="agent-x", expected_hop_depth=1)
         assert ev["metric_type"] == "frequency"
         assert ev["z_score"] == 5.0
         assert ev["baseline"] == 1.0
@@ -729,12 +746,15 @@ class TestGate175FrequencyAnomaly:
             gateway._anomaly_freq, "record_and_check", return_value=warn_result
         ):
             # Should NOT raise
-            gateway.pre_tool_call("analyst", "search", {}, caller_id="agent-x")
+            gateway.pre_tool_call(
+                "analyst", "search", {}, caller_id="agent-x", hop_depth=1
+            )
 
         sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
         warn_events = [e for e in sent_calls if e.get("event_type") == "anomaly_warn"]
         assert len(warn_events) == 1
         ev = warn_events[0]
+        _assert_audit_carries_identity(ev, expected_caller_id="agent-x", expected_hop_depth=1)
         assert ev["metric_type"] == "frequency"
         assert ev["z_score"] == 2.5
 
@@ -859,7 +879,7 @@ class TestGate55EgressAnomaly:
         block_result = AnomalyResult(
             level=ResponseLevel.BLOCK, z_score=5.0, baseline=100.0, observed=10000.0
         )
-        tokens = set_caller_context("egress-agent", 1)
+        tokens = set_caller_context("agent-x", 1)
         try:
             with patch.object(
                 gateway._anomaly_egress, "record_and_check", return_value=block_result
@@ -874,6 +894,7 @@ class TestGate55EgressAnomaly:
         ]
         assert len(anomaly_events) == 1
         ev = anomaly_events[0]
+        _assert_audit_carries_identity(ev, expected_caller_id="agent-x", expected_hop_depth=1)
         assert ev["metric_type"] == "egress"
         assert ev["z_score"] == 5.0
         assert ev["baseline"] == 100.0
@@ -929,6 +950,51 @@ class TestGate55EgressAnomaly:
         ctx = call_kwargs["anomaly_context"]
         assert ctx["metric_type"] == "egress"
         assert ctx["z_score"] == 3.5
+        # CLEAN-02: max_depth kwarg must be present and match the registry's configured depth
+        assert (
+            MockHITL.return_value.check.call_args.kwargs.get("max_depth")
+            == gateway._agent_registry.max_depth
+        )
+
+    def test_gate55_escalate_denied_by_hitl_sends_audit_event(self):
+        """Gate 5.5: ESCALATE + ApprovalDeniedError sends anomaly_blocked with denied_by='hitl' (gateway.py:423)."""
+        from argus.security.anomaly.detector import AnomalyResult, ResponseLevel
+        from argus.security.identity import set_caller_context, reset_caller_context
+
+        gateway, mock_audit = self._make_gateway()
+
+        escalate_result = AnomalyResult(
+            level=ResponseLevel.ESCALATE, z_score=3.5, baseline=200.0, observed=800.0
+        )
+        tokens = set_caller_context("agent-x", 1)
+        try:
+            with patch.object(
+                gateway._anomaly_egress,
+                "record_and_check",
+                return_value=escalate_result,
+            ):
+                with patch.object(
+                    gateway._anomaly_egress, "get_recent_calls", return_value=[]
+                ):
+                    with patch("argus.security.gateway.HITLGate") as MockHITL:
+                        MockHITL.return_value.check.side_effect = ApprovalDeniedError(
+                            gate="anomaly",
+                            blocked="[egress-volume]",
+                            rule="hitl_denied",
+                        )
+                        result = gateway.post_tool_call("a" * 800)
+        finally:
+            reset_caller_context(tokens)
+
+        assert result == "[ANOMALY: output suppressed]"
+        sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
+        anomaly_events = [
+            e for e in sent_calls if e.get("event_type") == "anomaly_blocked"
+        ]
+        assert len(anomaly_events) == 1
+        ev = anomaly_events[0]
+        assert ev["denied_by"] == "hitl"
+        _assert_audit_carries_identity(ev, expected_caller_id="agent-x", expected_hop_depth=1)
 
     def test_gate55_warn_sends_audit_no_output_change(self):
         """Gate 5.5: egress WARN sends audit event, returns original clean_output unchanged."""
@@ -940,15 +1006,24 @@ class TestGate55EgressAnomaly:
             level=ResponseLevel.WARN, z_score=2.5, baseline=100.0, observed=250.0
         )
         original = "clean output data"
-        with patch.object(
-            gateway._anomaly_egress, "record_and_check", return_value=warn_result
-        ):
-            result = gateway.post_tool_call(original)
+        from argus.security.identity import set_caller_context, reset_caller_context
+
+        tokens = set_caller_context("agent-x", 1)
+        try:
+            with patch.object(
+                gateway._anomaly_egress, "record_and_check", return_value=warn_result
+            ):
+                result = gateway.post_tool_call(original)
+        finally:
+            reset_caller_context(tokens)
 
         assert result == original
         sent_calls = [c[0][0] for c in mock_audit.send.call_args_list]
         warn_events = [e for e in sent_calls if e.get("event_type") == "anomaly_warn"]
         assert len(warn_events) == 1
+        _assert_audit_carries_identity(
+            warn_events[0], expected_caller_id="agent-x", expected_hop_depth=1
+        )
         assert warn_events[0]["metric_type"] == "egress"
 
     def test_gate55_ok_no_audit_output_unchanged(self):
