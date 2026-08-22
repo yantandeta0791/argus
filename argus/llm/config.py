@@ -356,8 +356,6 @@ def load_policy_metadata(raw: dict) -> dict[str, Any] | None:
     Returns None when no policy section is present.
     """
     policy_raw = raw.get("policy", {}) or {}
-    if not policy_raw:
-        return None
 
     import hashlib
     import json as _json

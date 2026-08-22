@@ -554,9 +554,14 @@ Initial bootstrap. Security foundation, 5-state execution engine, LLM cost route
 - Webhook HITL approval (`HITL-06`) — approve/deny over signed HTTP requests for REST-side agents; see [docs/webhook-hitl.md](docs/webhook-hitl.md)
 - HMAC SHA-256 signed canonical payloads; timeout, malformed response, and transport failure default deny
 
-### v0.8 (planned)
+### v0.8 — Policy Shadow Mode & Decision Evidence (in implementation)
 
-- Policy shadow/dry-run mode — log would-be decisions without enforcing
+- `policy.mode: shadow` evaluates provenance and RBAC permissions without blocking, emitting immutable `would_block` decisions
+- `argus audit --shadow --summary` explains impact by gate/tool/rule and policy hash
+- See [docs/policy-shadow-mode.md](docs/policy-shadow-mode.md) for safe rollout, audit contract, and threat model
+
+### v0.9 (planned)
+
 - OPA/Rego bundle interop for policy portability
 - LlamaIndex adapter (`ADPT-08`); anomaly baseline persistence (`ANOM-08`); Markov tool-sequence anomalies (`ANOM-07`)
 - Redis hot memory + Qdrant semantic memory; OCI skill registry; Ollama validation pass

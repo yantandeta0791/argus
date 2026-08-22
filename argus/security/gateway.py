@@ -349,6 +349,22 @@ class SecurityGateway:
                     hop_depth=effective_hop_depth,
                 )
                 raise
+        else:
+            # Record a successful evaluation only when a concrete RBAC policy is
+            # configured; permissive/no-policy calls are not policy decisions.
+            if self._config.permissions is not None:
+                self._record_policy_decision(
+                    mode=self._config.policy_mode,
+                    outcome="allow",
+                    gate="permission",
+                    tool_name=tool_name,
+                    agent_role=agent_role,
+                    rule=f"role={agent_role} tool={tool_name}",
+                    reason="Tool permission granted by policy",
+                    caller_id=effective_caller_id,
+                    hop_depth=effective_hop_depth,
+                    provenance=active_provenance.value,
+                )
 
         # Gate 1.75 pre-compute: check frequency anomaly BEFORE HITL prompt so
         # anomaly context can be merged into the HITL banner (ANOM-01)

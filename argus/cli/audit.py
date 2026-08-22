@@ -235,16 +235,21 @@ def _render_summary(log_path: Path) -> None:
         ", ".join(policy_hash[:12] for policy_hash in summary.policy_hashes) or "none"
     )
     console.print(f"Shadow policy summary: hash {hashes}")
-    console.print(
-        f"{summary.total_would_blocks} would-block decisions / "
-        f"{summary.total_decisions} evaluated calls"
-    )
+    if len(summary.policy_hashes) == 1:
+        console.print(
+            f"{summary.total_would_blocks} would-block decisions / "
+            f"{summary.total_decisions} evaluated calls"
+        )
     if summary.warning:
         console.print(f"WARNING: {summary.warning}")
     for policy_hash in summary.policy_hashes:
+        evaluated, would_blocks = summary.totals_by_policy_hash[policy_hash]
         console.print(f"\nPolicy hash: {policy_hash[:12]}")
+        console.print(
+            f"{would_blocks} would-block decisions / {evaluated} evaluated calls"
+        )
         for (gate, tool_name, rule), count in sorted(
-            summary.groups[policy_hash].items()
+            summary.groups.get(policy_hash, {}).items()
         ):
             console.print(f"{gate}\t{tool_name}\t{rule or ''}\t{count}")
 

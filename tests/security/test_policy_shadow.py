@@ -115,3 +115,38 @@ def test_shadow_provenance_and_permission_denials_record_in_gate_order():
         ("provenance", "would_block"),
         ("permission", "would_block"),
     ]
+
+
+def test_shadow_permission_allow_records_allow_decision():
+    gateway, audit = make_gateway(
+        policy_mode="shadow",
+        permissions={
+            "rules": [{"role": "analyst", "tool": "search", "effect": "allow"}]
+        },
+    )
+    assert gateway.pre_tool_call("analyst", "search", {}) == {}
+    event = policy_decisions(audit)[0]
+    assert event["gate"] == "permission"
+    assert event["outcome"] == "allow"
+    assert event["policy_hash"] == "policy-abc"
+
+
+def test_shadow_decision_without_policy_section_has_hash():
+    from argus.llm.config import load_gateway_config
+
+    audit = CaptureAudit()
+    gateway = SecurityGateway(
+        config=load_gateway_config(
+            {
+                "policy": {"mode": "shadow"},
+                "tools": {"export_data": {"provenance_required": "user_originated"}},
+            }
+        ),
+        audit_logger=audit,
+    )
+    tokens = set_provenance(Provenance.UNTRUSTED_RETRIEVAL)
+    try:
+        gateway.pre_tool_call("agent", "export_data", {})
+    finally:
+        reset_provenance(tokens)
+    assert len(policy_decisions(audit)[0]["policy_hash"]) == 64

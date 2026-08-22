@@ -9,6 +9,7 @@
 | [adversarial-testing.md](adversarial-testing.md) | **v0.6** — the attack corpus, how to run it, published detection scope |
 | [policy-lifecycle.md](policy-lifecycle.md) | **v0.6** — policy metadata stamp, config hashing, operational lifecycle |
 | [webhook-hitl.md](webhook-hitl.md) | **v0.7** — signed operator approval over HTTP, request/response contract, failure semantics |
+| [policy-shadow-mode.md](policy-shadow-mode.md) | **v0.8** — safe policy observation, decision evidence, rollout procedure, threat model |
 | [skills.md](skills.md) | Skill manifests, trust tiers, lifecycle stages |
 
 ## Gate order (complete)
