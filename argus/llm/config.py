@@ -365,7 +365,7 @@ def load_policy_metadata(raw: dict) -> dict[str, Any] | None:
     metadata = {
         f"policy_{k}": v
         for k, v in policy_raw.items()
-        if isinstance(v, (str, int, float, bool))
+        if k != "mode" and isinstance(v, (str, int, float, bool))
     }
     metadata.setdefault(
         "policy_hash",
@@ -374,6 +374,19 @@ def load_policy_metadata(raw: dict) -> dict[str, Any] | None:
         ).hexdigest(),
     )
     return metadata
+
+
+def load_policy_mode(raw: dict) -> str:
+    """Parse and validate policy.mode, defaulting to backward-compatible enforce."""
+    policy_raw = raw.get("policy", {}) or {}
+    mode = policy_raw.get("mode", "enforce")
+    if mode not in {"enforce", "shadow"}:
+        from argus.security.exceptions import ConfigValidationError
+
+        raise ConfigValidationError(
+            "Invalid policy.mode in argus.yaml: expected 'enforce' or 'shadow'"
+        )
+    return mode
 
 
 def load_gateway_config(raw: dict):
@@ -395,6 +408,7 @@ def load_gateway_config(raw: dict):
     provenance_required = load_provenance_config(raw)
     egress_enforce = load_egress_enforce(raw)
     policy_metadata = load_policy_metadata(raw)
+    policy_mode = load_policy_mode(raw)
 
     return GatewayConfig(
         permissions=permissions,
@@ -402,6 +416,7 @@ def load_gateway_config(raw: dict):
         egress_allowlist=egress,
         egress_enforce=egress_enforce,
         policy_metadata=policy_metadata,
+        policy_mode=policy_mode,
         hitl=hitl,
         otel=otel,
         agents=agents_cfg,

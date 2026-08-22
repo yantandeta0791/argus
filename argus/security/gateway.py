@@ -67,6 +67,7 @@ class GatewayConfig:
     policy_metadata: Optional[dict[str, Any]] = (
         None  # v0.6: version/name/hash provenance stamped into every audit event
     )
+    policy_mode: str = "enforce"  # v0.8: enforce blocks; shadow only records decisions
 
 
 class SecurityGateway:
