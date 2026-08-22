@@ -263,3 +263,64 @@ def test_audit_filter_type_on_gateway_records(tmp_path):
     result = runner.invoke(app, ["audit", "--log", str(tmp_log), "--type", "hitl"])
     assert "delete_db" in result.output
     assert "read_file" not in result.output
+
+
+# ---------------------------------------------------------------------------
+# v0.8 policy shadow decisions
+# ---------------------------------------------------------------------------
+
+
+def _policy_decision(outcome: str, mode: str = "shadow") -> dict:
+    return {
+        "event_type": "policy_decision",
+        "decision_id": "decision-1",
+        "mode": mode,
+        "outcome": outcome,
+        "gate": "permission",
+        "tool_name": "export_data",
+        "agent_role": "analyst",
+        "rule": "role=analyst tool=export_data effect=deny",
+        "reason": "Tool permission denied by policy",
+        "policy_name": "baseline",
+        "policy_version": "1.3.0",
+        "policy_hash": "abcdefghijklmnop",
+    }
+
+
+def test_normalize_policy_decision_for_shadow_filter():
+    from argus.cli.audit import _is_shadow_policy_decision
+
+    assert _is_shadow_policy_decision(_policy_decision("would_block"))
+    assert _is_shadow_policy_decision(_policy_decision("allow"))
+    assert not _is_shadow_policy_decision(_policy_decision("block", mode="enforce"))
+
+
+def test_audit_shadow_filter_shows_only_shadow_policy_decisions(tmp_path):
+    from argus.cli.main import app
+
+    tmp_log = tmp_path / "audit.jsonl"
+    _write_jsonl(
+        tmp_log,
+        [
+            _policy_decision("would_block"),
+            _policy_decision("allow"),
+            _make_event("permission", "blocked", "other"),
+        ],
+    )
+    result = runner.invoke(app, ["audit", "--log", str(tmp_log), "--shadow"])
+    assert result.exit_code == 0
+    assert "export_data" in result.output
+    assert "other" not in result.output
+
+
+def test_render_policy_decision_includes_mode_rule_policy_hash(tmp_path):
+    from argus.cli.main import app
+
+    tmp_log = tmp_path / "audit.jsonl"
+    _write_jsonl(tmp_log, [_policy_decision("would_block")])
+    result = runner.invoke(app, ["audit", "--log", str(tmp_log)])
+    assert "mode: shadow" in result.output
+    assert "decision: would_block" in result.output
+    assert "role=analyst tool=export_data effect=deny" in result.output
+    assert "baseline@1.3.0" in result.output
+    assert "policy_hash: abcdefghijkl" in result.output

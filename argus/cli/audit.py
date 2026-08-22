@@ -93,6 +93,13 @@ def _normalize_event(event: dict) -> dict:
     return {**event, "gate": gate, "outcome": outcome}
 
 
+def _is_shadow_policy_decision(event: dict) -> bool:
+    """Return whether an event belongs in the shadow-policy audit view."""
+    return event.get("outcome") == "would_block" or (
+        event.get("event_type") == "policy_decision" and event.get("mode") == "shadow"
+    )
+
+
 def _derive_severity(event: dict) -> str:
     """Derive a severity label from gate + outcome.
 
@@ -164,6 +171,7 @@ _OUTCOME_BORDER_COLORS: dict[str, str] = {
     "blocked": "red",
     "allowed": "green",
     "redacted": "yellow",
+    "would_block": "#ff8700",
 }
 
 
@@ -201,6 +209,19 @@ def _render_event(event: dict) -> None:
         lines.append(f"role: {agent_role}")
     if rule_triggered:
         lines.append(f"rule: {rule_triggered}")
+    if event.get("event_type") == "policy_decision":
+        lines.append(f"mode: {event.get('mode', '')}")
+        lines.append(f"decision: {outcome}")
+        if event.get("rule"):
+            lines.append(f"rule: {event['rule']}")
+        if event.get("reason"):
+            lines.append(f"reason: {event['reason']}")
+        policy_name = event.get("policy_name")
+        policy_version = event.get("policy_version")
+        if policy_name and policy_version:
+            lines.append(f"policy: {policy_name}@{policy_version}")
+        if policy_hash := event.get("policy_hash"):
+            lines.append(f"policy_hash: {policy_hash[:12]}")
 
     content = "\n".join(lines)
     console.print(Panel(content, box=box.ROUNDED, border_style=border_color))
@@ -236,6 +257,9 @@ def audit_command(
         "--until",
         help="Show only events older than this duration ago (e.g. 1h, 30m, 2d).",
     ),
+    shadow: bool = typer.Option(
+        False, "--shadow", help="Show shadow policy decisions."
+    ),
 ) -> None:
     """Stream and render the Argus JSONL audit log as Rich panels."""
     # Resolve log existence and emptiness
@@ -254,6 +278,8 @@ def audit_command(
     matched_count = 0
     for raw_event in _iter_events(log):
         event = _normalize_event(raw_event)
+        if shadow and not _is_shadow_policy_decision(event):
+            continue
         if _matches_filters(event, type, severity, since_dt, until_dt):
             _render_event(event)
             matched_count += 1
